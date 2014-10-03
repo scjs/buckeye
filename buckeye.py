@@ -39,37 +39,6 @@ PAUSE_RE = re.compile('(<|>|{|}|TRANS|SIL|IVER|ERROR|CUTOFF|'
 TRACK_RE = re.compile('s[0-4][0-9]/s[0-4][0-9]0[0-6][ab].zip')
 
 
-class Corpus(object):
-    """Iterable of Speaker instances for each of the 40 speakers
-    in the Buckeye Corpus.
-
-    Arguments:
-        path:           path to a directory containing all of the zipped
-                        speaker archives (s01.zip, s02.zip, s03.zip, ...)
-        cache:          if True, keeps the corpus in memory. If False, the
-                        corpus is not kept in memory and can only be iterated
-                        through once. Default is False.
-        load_wavs:      if True, wav files are read into the Track
-                        instances, in addition to the text annotation
-                        files. Default is False.
-    """
-
-    def __init__(self, path, cache=False, load_wavs=False):
-        self.paths = sorted(glob.glob(join(path, 's[0-4][0-9].zip')))
-
-        if cache:
-            self.speakers = list(self.speaker(load_wavs))
-        else:
-            self.speakers = self.speaker(load_wavs)
-
-    def __iter__(self):
-        return iter(self.speakers)
-
-    def speaker(self, load_wavs=False):
-        for path in self.paths:
-            yield Speaker(path, load_wavs)
-
-
 class Speaker(object):
     """Iterable of Track instances for the subfiles of one speaker
     (s0101a.zip, s0101b.zip, ...). Also includes metadata for that
@@ -102,11 +71,13 @@ class Speaker(object):
         self.tracks = []
 
         zfile = zipfile.ZipFile(zpath)
+
         for subzip in sorted(zfile.namelist()):
             if re.match(TRACK_RE, subzip):
                 track_contents = zipfile.ZipFile(StringIO(zfile.read(subzip)))
                 track = Track(subzip, track_contents, load_wavs)
                 self.tracks.append(track)
+
         zfile.close()
 
     def __iter__(self):
@@ -266,6 +237,23 @@ class Track(object):
 
         return logs
 
+
+def corpus(path, load_wavs=False):
+    """Generator that takes a path to a folder containing compressed Buckeye
+    Corpus speaker archives and yields Speaker instances.
+    
+    Arguments:
+        path:           path to a directory containing all of the zipped
+                        speaker archives (s01.zip, s02.zip, s03.zip, ...)
+        load_wavs:      if True, wav files are read into the Track instances
+                        that are referenced in the yielded Speaker instances.
+                        Default is False.
+    """
+    
+    paths = sorted(glob.glob(join(path, 's[0-4][0-9].zip')))
+    
+    for path in paths:
+        yield Speaker(path, load_wavs)
 
 def process_logs(logs):
     """Generator that takes a Buckeye .log corpus file and yields LogEntry

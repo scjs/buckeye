@@ -33,7 +33,6 @@ print speaker.name, speaker.sex, speaker.age, speaker.interviewer
 ```
 s01 f y f
 ```
-    
 
 The tracks can be accessed through the `tracks` attribute.
 
@@ -41,12 +40,12 @@ The tracks can be accessed through the `tracks` attribute.
 print speaker.tracks
 ```
 ```
-[<buckeye.Track object at 0x0000000003F61DD8>, <buckeye.Track object at 0x000000000430C668>, <buckeye.Track object at 0x0000000004672BA8>, <buckeye.Track object at 0x0000000005B2E048>, <buckeye.Track object at 0x0000000005D607B8>]
+[<buckeye.Track object at 0x0000000003EE3DD8>, <buckeye.Track object at 0x0000000004278550>, <buckeye.Track object at 0x00000000045DCA90>, <buckeye.Track object at 0x00000000059E4EF0>, <buckeye.Track object at 0x0000000005CE26A0>]
 ```
-    
 
 The tracks can also be accessed by iterating through the `Speaker` instance.
-There is more detail below about accessing the annotations under **Tracks**.
+There is more detail below about accessing the annotations under the heading
+**Tracks**.
 
 ```python
 for track in speaker:
@@ -56,15 +55,15 @@ for track in speaker:
 s0101a s0101b s0102a s0102b s0103a
 ```
 
-The `Corpus` class is a convenience for loading and iterating through all of the
-speaker archives together. Put all forty speaker archives in one directory, such
-as `speakers/`. Point a new `Corpus` instance to this folder.
+The `corpus()` generator function is a convenience for iterating through all of
+the speaker archives together. Put all forty speaker archives in one directory,
+such as `speakers/`. Create a new generator with this directory as an argument.
 
 ```python
-corpus = buckeye.Corpus('speakers/')
+corpus = buckeye.corpus('speakers/')
 ```
 
-This instance can be iterated through to provide `Speaker` instances in order.
+The generator will yield the `Speaker` instances in numerical order.
 
 ```python
 for speaker in corpus:
@@ -74,43 +73,10 @@ for speaker in corpus:
 s01 s02 s03 s04 s05 s06 s07 s08 s09 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32 s33 s34 s35 s36 s37 s38 s39 s40
 ```
 
-In this case, `corpus` works like a generator, and can only be iterated through
-once. If you need to be able to access the `Speaker` instances more than once,
-set the optional `cache` argument to `True`.
-
-```python
-corpus_cached = buckeye.Corpus('speakers/', cache=True)
-
-for speaker in corpus_cached:
-    print speaker.name,
-   
-print
-
-for speaker in corpus_cached:
-    print speaker.sex,
-```
-```
-s01 s02 s03 s04 s05 s06 s07 s08 s09 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32 s33 s34 s35 s36 s37 s38 s39 s40
-f f m f f m f f f m m f m f m f f f m f f m m m f f f m m m f m m m m m f m f m
-```
-    
-
-If they are cached, the `Speaker` instances can also be accessed by slicing the
-`speakers` attribute.
-
-```python
-speaker = corpus_cached.speakers[10]
-
-print speaker.name
-```
-```
-s11
-```    
-
-If a `Corpus` instance is created with `load_wavs` set to `True`, this argument
-will be passed to the `Speaker` instances that it creates. It may take a minute
-or two to create a `Corpus` instance with both `cache` and `load_wavs` set to
-`True`.
+If a `corpus()` generator is created with `load_wavs` set to `True`, this
+argument will be passed to the `Speaker` instances that it creates. Loading the
+`wav` files takes more memory and time than just loading the annotations, so
+this option is `False` if not specified.
 
 ### Track
 
@@ -135,16 +101,20 @@ For example, the first five entries in the `.words` in the first track of the
 first speaker can be retrieved like this:
 
 ```python
-speaker = corpus_cached.speakers[0]
+# cache the corpus
+corpus_cached = list(buckeye.corpus('speakers/'))
 
+# get the first speaker and the first track for that speaker
+speaker = corpus_cached[0]
 track = speaker.tracks[0]
 
+# slice the first five words
 five_words = track.words[:5]
 ```
 
 Each entry is stored in a `Word` instance, which has attributes for each
-annotation in the `.words` file (see the docstring for `Word` in
-`containers.py`).
+annotation type in the `.words` file (e.g., orthography and phonetic
+transcription; see the docstring for `Word` in `containers.py`).
 
 ```python
 word = track.words[4]
@@ -153,7 +123,7 @@ print word.orthography, word.beg, word.end, word.phonemic, word.phonetic, word.p
 ```
 ```
 okay 32.216575 32.622045 ['ow', 'k', 'ey'] ['k', 'ay'] NN 0.40547
-```    
+```
 
 The `Word` instance also has references to the `Phone` instances that belong to
 the word. When a `Track` instance is created, it calls an internal
@@ -164,8 +134,8 @@ word's timestamps and the timestamps in the track's `.phones` file.
 print word.phones
 ```
 ```
-[<containers.Phone object at 0x00000000071503C8>, <containers.Phone object at 0x0000000007150320>]
-```    
+[<containers.Phone object at 0x000000000BB4E390>, <containers.Phone object at 0x000000000BB4E320>]
+```
 
 ```python
 for phone in word.phones:
@@ -174,7 +144,7 @@ for phone in word.phones:
 ```
 k 32.216575 32.376593 0.160018
 ay 32.376593 32.622045 0.245452
-```    
+```
 
 #### Phones
 
@@ -194,7 +164,7 @@ SIL 0.102385 4.275744 4.173359
 NOISE 4.275744 8.513763 4.238019
 IVER 8.513763 32.216575 23.702812
 k 32.216575 32.376593 0.160018
-```    
+```
 
 #### Log
 
@@ -207,7 +177,7 @@ print log.entry, log.beg, log.end
 ```
 ```
 <VOICE=modal> 0.0 61.142603
-```    
+```
 
 The `get_logs()` method of the `Track` class can be called to retrieve the log
 entries that overlap with the given timestamps. For example, the log entries
@@ -224,7 +194,7 @@ for log in logs:
 <VOICE=modal> 0.0 61.142603
 <VOICE=creaky> 61.142603 61.397647
 <VOICE=modal> 61.397647 176.705681
-```    
+```
 
 #### Wavs
 
@@ -237,5 +207,9 @@ track = speaker[0]
 
 track.clip_wav('myclip.wav', 60.0, 62.0)
 ```
+
 This will create a wav file in the current directory called `myclip.wav` which
 contains the sound between 60 and 62 seconds in the track audio.
+
+
+    
