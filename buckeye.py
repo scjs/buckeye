@@ -86,6 +86,12 @@ class Speaker(object):
     def __getitem__(self, i):
         return self.tracks[i]
 
+    def __repr__(self):
+        return 'Speaker("{}")'.format(self.path)
+
+    def __str__(self):
+        return '<Speaker {} ({}, {})>'.format(self.name, self.sex, self.age)
+
 
 class Track(object):
     """Container holding the processed annotation data, and optionally
@@ -135,6 +141,12 @@ class Track(object):
 
         # make a list of the log entry endpoints to quickly search later
         self.log_ends = [l.end for l in self.log]
+
+    def __repr__(self):
+        return 'Track("{}")'.format(self.path)
+
+    def __str__(self):
+        return '<Track {}>'.format(self.name)
 
     def clip_wav(self, clip, beg, end):
         """Extracts a clip from the track .wav file.
@@ -241,7 +253,7 @@ class Track(object):
 def corpus(path, load_wavs=False):
     """Generator that takes a path to a folder containing compressed Buckeye
     Corpus speaker archives and yields Speaker instances.
-    
+
     Arguments:
         path:           path to a directory containing all of the zipped
                         speaker archives (s01.zip, s02.zip, s03.zip, ...)
@@ -249,9 +261,9 @@ def corpus(path, load_wavs=False):
                         that are referenced in the yielded Speaker instances.
                         Default is False.
     """
-    
+
     paths = sorted(glob.glob(join(path, 's[0-4][0-9].zip')))
-    
+
     for path in paths:
         yield Speaker(path, load_wavs)
 

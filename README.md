@@ -12,6 +12,7 @@ A `Speaker` instance is created by pointing to one of the zipped speaker
 archives available on the corpus website. These archives have names like
 `s01.zip`, `s02.zip`, and `s03.zip`.
 
+
 ```python
 import buckeye
 
@@ -40,11 +41,11 @@ The tracks can be accessed through the `tracks` attribute.
 print speaker.tracks
 ```
 ```
-[<buckeye.Track object at 0x0000000003EE3DD8>, <buckeye.Track object at 0x0000000004278550>, <buckeye.Track object at 0x00000000045DCA90>, <buckeye.Track object at 0x00000000059E4EF0>, <buckeye.Track object at 0x0000000005CE26A0>]
-```
+[Track("s01/s0101a.zip"), Track("s01/s0101b.zip"), Track("s01/s0102a.zip"), Track("s01/s0102b.zip"), Track("s01/s0103a.zip")]
+```    
 
 The tracks can also be accessed by iterating through the `Speaker` instance.
-There is more detail below about accessing the annotations under the heading
+There is more detail about accessing the annotations below under the heading
 **Tracks**.
 
 ```python
@@ -53,7 +54,7 @@ for track in speaker:
 ```
 ```
 s0101a s0101b s0102a s0102b s0103a
-```
+```    
 
 The `corpus()` generator function is a convenience for iterating through all of
 the speaker archives together. Put all forty speaker archives in one directory,
@@ -71,7 +72,7 @@ for speaker in corpus:
 ```
 ```
 s01 s02 s03 s04 s05 s06 s07 s08 s09 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32 s33 s34 s35 s36 s37 s38 s39 s40
-```
+```    
 
 If a `corpus()` generator is created with `load_wavs` set to `True`, this
 argument will be passed to the `Speaker` instances that it creates. Loading the
@@ -101,7 +102,7 @@ For example, the first five entries in the `.words` in the first track of the
 first speaker can be retrieved like this:
 
 ```python
-# cache the corpus
+# store the corpus in a list
 corpus_cached = list(buckeye.corpus('speakers/'))
 
 # get the first speaker and the first track for that speaker
@@ -134,8 +135,8 @@ word's timestamps and the timestamps in the track's `.phones` file.
 print word.phones
 ```
 ```
-[<containers.Phone object at 0x000000000BB4E390>, <containers.Phone object at 0x000000000BB4E320>]
-```
+[Phone('k', 32.216575, 32.376593), Phone('ay', 32.376593, 32.622045)]
+```    
 
 ```python
 for phone in word.phones:
@@ -177,7 +178,7 @@ print log.entry, log.beg, log.end
 ```
 ```
 <VOICE=modal> 0.0 61.142603
-```
+```    
 
 The `get_logs()` method of the `Track` class can be called to retrieve the log
 entries that overlap with the given timestamps. For example, the log entries
@@ -210,6 +211,3 @@ track.clip_wav('myclip.wav', 60.0, 62.0)
 
 This will create a wav file in the current directory called `myclip.wav` which
 contains the sound between 60 and 62 seconds in the track audio.
-
-
-    

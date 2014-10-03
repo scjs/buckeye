@@ -56,6 +56,16 @@ class Word(object):
         except TypeError:
             self.__dur = None
 
+    def __repr__(self):
+        return 'Word({}, {}, {}, {}, {}, {})'.format(repr(self.orthography),
+                                                     self.beg, self.end,
+                                                     repr(self.phonemic),
+                                                     repr(self.phonetic),
+                                                     repr(self.pos))
+
+    def __str__(self):
+        return '<Word "{}" at {}>'.format(self.orthography, self.beg)
+
     @property
     def orthography(self):
         return self.__orthography
@@ -159,6 +169,12 @@ class Pause(object):
         self.__beg = beg
         self.__end = end
 
+    def __repr__(self):
+        return 'Pause({}, {}, {})'.format(repr(self.entry), self.beg, self.end)
+
+    def __str__(self):
+        return '<Pause {} at {}>'.format(self.entry, self.beg)
+
     @property
     def entry(self):
         return self.__entry
@@ -189,6 +205,13 @@ class LogEntry(object):
         self.__entry = entry
         self.__beg = beg
         self.__end = end
+
+    def __repr__(self):
+        return 'LogEntry({}, {}, {})'.format(repr(self.entry),
+                                             self.beg, self.end)
+
+    def __str__(self):
+        return '<Log "{}" at {}>'.format(self.entry, self.beg)
 
     @property
     def entry(self):
@@ -229,6 +252,12 @@ class Phone(object):
             self.__dur = self.__end - self.__beg
         except TypeError:
             self.__dur = None
+
+    def __repr__(self):
+        return 'Phone({}, {}, {})'.format(repr(self.seg), self.beg, self.end)
+
+    def __str__(self):
+        return '<Phone [{}] at {}>'.format(self.seg, self.beg)
 
     @property
     def seg(self):
@@ -277,6 +306,13 @@ class Utterance(object):
             self.__dur = self.__end - self.__beg
         except TypeError:
             self.__dur = None
+
+    def __repr__(self):
+        return 'Utterance({})'.format(repr(self.words()))
+
+    def __str__(self):
+        utt = ' '.join([word.orthography for word in self.words()])
+        return '<Utterance "{}">'.format(utt)
 
     @property
     def beg(self):
