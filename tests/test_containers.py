@@ -168,7 +168,7 @@ class TestLogEntry(unittest.TestCase):
 
     @raises(AttributeError)
     def test_readonly_dur(self):
-        self.phone.dur = 1.0
+        self.log.dur = 1.0
 
 class TestPhone(unittest.TestCase):
 
