@@ -206,6 +206,11 @@ class LogEntry(object):
         self.__beg = beg
         self.__end = end
 
+        try:
+            self.__dur = self.__end - self.__beg
+        except TypeError:
+            self.__dur = None
+
     def __repr__(self):
         return 'LogEntry({}, {}, {})'.format(repr(self.entry),
                                              self.beg, self.end)
@@ -224,6 +229,10 @@ class LogEntry(object):
     @property
     def end(self):
         return self.__end
+
+    @property
+    def dur(self):
+        return self.__dur
 
 
 class Phone(object):

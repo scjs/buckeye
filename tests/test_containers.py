@@ -140,6 +140,7 @@ class TestLogEntry(unittest.TestCase):
         assert_equal(self.log.entry, '<voiceless-vowel>')
         assert_equal(self.log.beg, 0.45)
         assert_equal(self.log.end, 0.50)
+        assert_equal(self.log.dur, 0.50 - 0.45)
 
     def test_empty_log(self):
         empty_log = LogEntry('<voiceless-vowel>')
@@ -147,6 +148,7 @@ class TestLogEntry(unittest.TestCase):
         assert_equal(empty_log.entry, '<voiceless-vowel>')
         assert_is_none(empty_log.beg)
         assert_is_none(empty_log.end)
+        assert_is_none(empty_log.dur)
 
     @raises(TypeError)
     def test_log_missing(self):
@@ -163,6 +165,10 @@ class TestLogEntry(unittest.TestCase):
     @raises(AttributeError)
     def test_readonly_end(self):
         self.log.end = 1.0
+
+    @raises(AttributeError)
+    def test_readonly_dur(self):
+        self.phone.dur = 1.0
 
 class TestPhone(unittest.TestCase):
 
