@@ -1,4 +1,6 @@
+from __future__ import absolute_import
 from __future__ import division
+from __future__ import print_function
 
 from bisect import bisect_left
 from cStringIO import StringIO
@@ -9,7 +11,7 @@ import re
 import wave
 import zipfile
 
-from containers import Word, Pause, LogEntry, Phone, Utterance
+from .containers import Word, Pause, LogEntry, Phone, Utterance
 
 
 SPEAKERS = {'s01': ('f', 'y', 'f'), 's02': ('f', 'o', 'm'),
