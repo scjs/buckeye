@@ -1,9 +1,13 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import unittest
 
 from nose.tools import *
 from itertools import permutations
 
-from containers import Word, Pause, LogEntry, Phone, Utterance
+from buckeye.containers import Word, Pause, LogEntry, Phone, Utterance
 
 class TestWord(unittest.TestCase):
 
