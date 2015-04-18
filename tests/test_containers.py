@@ -2,19 +2,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import unittest
-
 from nose.tools import *
 from itertools import permutations
 
 from buckeye.containers import Word, Pause, LogEntry, Phone, Utterance
 
-class TestWord(unittest.TestCase):
+class TestWord(object):
 
-    @classmethod
-    def setUp(cls):
-        cls.word = Word('the', 0.05, 0.25, ['dh', 'iy'], ['dh'], 'DT')
-        cls.empty_word = Word('uh', 0.25, 0.40)
+    def setup(self):
+        self.word = Word('the', 0.05, 0.25, ['dh', 'iy'], ['dh'], 'DT')
+        self.empty_word = Word('uh', 0.25, 0.40)
         
     def test_word(self):
         assert_equal(self.word.orthography, 'the')
@@ -103,11 +100,10 @@ class TestWord(unittest.TestCase):
         misaligned_word.phones = [phone_dh]
         assert_true(misaligned_word.misaligned)
 
-class TestPause(unittest.TestCase):
+class TestPause(object):
 
-    @classmethod
-    def setUp(cls):
-        cls.pause = Pause('SIL', 0.0, 0.05)
+    def setup(self):
+        self.pause = Pause('SIL', 0.0, 0.05)
         
     def test_pause(self):
         assert_equal(self.pause.entry, 'SIL')
@@ -134,11 +130,10 @@ class TestPause(unittest.TestCase):
         self.pause.end = 1.0
         
         
-class TestLogEntry(unittest.TestCase):
+class TestLogEntry(object):
 
-    @classmethod
-    def setUp(cls):
-        cls.log = LogEntry('<voiceless-vowel>', 0.45, 0.50)
+    def setup(self):
+        self.log = LogEntry('<voiceless-vowel>', 0.45, 0.50)
         
     def test_log(self):
         assert_equal(self.log.entry, '<voiceless-vowel>')
@@ -174,11 +169,10 @@ class TestLogEntry(unittest.TestCase):
     def test_readonly_dur(self):
         self.log.dur = 1.0
 
-class TestPhone(unittest.TestCase):
+class TestPhone(object):
 
-    @classmethod
-    def setUp(cls):
-        cls.phone = Phone('dh', 0.05, 0.15)
+    def setup(self):
+        self.phone = Phone('dh', 0.05, 0.15)
         
     def test_phone(self):
         assert_equal(self.phone.seg, 'dh')
@@ -215,11 +209,10 @@ class TestPhone(unittest.TestCase):
         self.phone.dur = 1.0
 
 
-class TestUtterance(unittest.TestCase):
+class TestUtterance(object):
 
-    @classmethod
-    def setUp(cls):
-        cls.words = [
+    def setup(self):
+        self.words = [
             Word('the', 0, 0.10, ['dh', 'iy'], ['dh'], 'DT'),
             Word('cat', 0.10, 0.39, ['k', 'ae', 't'], ['k', 'ae', 't'], 'NN'),
             Word('is', 0.39, 0.55, ['ih', 'z'], ['ih', 'z'], 'VB'),
@@ -227,8 +220,8 @@ class TestUtterance(unittest.TestCase):
             Word('the', 0.73, 0.80, ['dh', 'iy'], ['dh', 'uh'], 'DT'),
             Word('mat', 0.80, 1.25, ['m', 'ae', 't'], ['m', 'ae', 't'], 'NN')]
 
-        cls.utt = Utterance(cls.words)
-        cls.empty_utt = Utterance()
+        self.utt = Utterance(self.words)
+        self.empty_utt = Utterance()
         
     def test_utterance(self):
         assert_equal(self.utt.beg, 0)
