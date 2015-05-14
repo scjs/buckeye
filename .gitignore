@@ -1,7 +1,8 @@
 *.py[cod]
 *.ipynb
-*.wav
+*.coverage
 speakers/
+scratch/
 
 # Distribution / packaging
 .Python
