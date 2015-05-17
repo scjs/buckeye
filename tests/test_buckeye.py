@@ -277,21 +277,25 @@ class TestTrack(object):
     def test_get_all_phones_backwards_word(self):
         self.track.words[1]._Word__beg = 0.44
         self.track.words[1]._Word__end = 0.15
+        self.track.words[1]._Word__dur = -0.29
         self.track.get_all_phones()
 
         assert_equal(self.track.words[1].phones, [])
 
         self.track.words[1]._Word__beg = 0.15
         self.track.words[1]._Word__end = 0.44
+        self.track.words[1]._Word__dur = 0.29
         self.track.get_all_phones()
 
     def test_get_all_phones_zero_word(self):
         self.track.words[1]._Word__end = 0.15
+        self.track.words[1]._Word__dur = 0.0
         self.track.get_all_phones()
 
         assert_equal(self.track.words[1].phones, [])
 
         self.track.words[1]._Word__end = 0.44
+        self.track.words[1]._Word__dur = 0.29
         self.track.get_all_phones()
 
     def test_get_all_phones_phonetic_is_none(self):
