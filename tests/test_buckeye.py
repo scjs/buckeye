@@ -29,7 +29,7 @@ PHONES = """header
 #
     0.06  121 dh
     0.15  121 ah
-    0.24  121 "k"
+    0.24  121 k
     0.37  121 ae
     0.44  121 t;
     0.51  121 ih
@@ -47,7 +47,7 @@ WORDS = """header
 #
     0.15  121 the; dh iy; dh ah; DT
     0.44  121 cat; k ae t; k ae t; NN
-    0.59  121 "is"; ih z; ih z; VBZ
+    0.59  121 is; ih z; ih z; VBZ
     0.77  121 on; aa n; aa n; IN
     0.91  121 the; dh iy; dh ah; DT
     1.19  121 mat; m ae t; m ae t; NN
@@ -451,7 +451,7 @@ class TestProcessPhones(object):
         yield self.check_expected, phones_spaced
 
     def test_blank_line_in_entry(self):
-        with_spaced_entry = '\n\n'.join([PHONES[:77], PHONES[77:]])
+        with_spaced_entry = '\n\n'.join([PHONES[:75], PHONES[75:]])
         phones_spaced = list(process_phones(StringIO(with_spaced_entry)))
 
         yield self.check_expected, phones_spaced

@@ -341,9 +341,6 @@ def process_phones(phones):
         try:
             time, color, phone = line.split(None, 2)
 
-            if '"' in phone:
-                phone = phone.replace('"', '')
-
             if '+1' in phone:
                 phone = phone.replace('+1', '')
 
@@ -422,9 +419,6 @@ def process_words(words):
         # s1801a has a missing newline in the first entry, with SIL and
         # B_TRANS on the same line with the same timestamp
         time, color, word = (w.strip() for w in word.split(None, 2))
-
-        if '"' in word:
-            word = word.replace('"', '')
 
         time = float(time)
 
