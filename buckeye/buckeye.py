@@ -205,8 +205,7 @@ class Track(object):
 
             # 21 tracks have a B_TRANS or E_TRANS marker that overlaps a word
             # 3 tracks have overlapping VOCNOISE and 1 has overlapping LAUGH
-            if (len(phones) != len(word.phonetic) and
-                    len(word.phonetic) > 0 and len(phones) > 0):
+            if word.phonetic and phones and len(word.phonetic) != len(phones):
                 if phones[0].seg in ('{B_TRANS}', 'VOCNOISE', 'LAUGH'):
                     left = left + 1
                     phones = self.phones[left:right]
@@ -283,28 +282,33 @@ def process_logs(logs):
 
     # skip the header
     line = logs.readline()
+
     while not line.startswith('#'):
         if line == '':
             raise EOFError
+
         line = logs.readline()
 
     line = logs.readline()
-    if line == '\n':
-        line = logs.readline()
 
+    # iterate over entries
     previous = 0.0
     while line != '':
         try:
             time, color, entry = line.split(None, 2)
+            entry = entry.strip()
+
         except ValueError:
             if line == '\n':
                 line = logs.readline()
                 continue
+
             time, color = line.split()
-            entry = ''
+            entry = None
 
         time = float(time)
-        yield LogEntry(entry.strip(), previous, time)
+        yield LogEntry(entry, previous, time)
+
         previous = time
         line = logs.readline()
 
@@ -322,36 +326,42 @@ def process_phones(phones):
 
     # skip the header
     line = phones.readline()
+
     while not line.startswith('#'):
         if line == '':
             raise EOFError
+
         line = phones.readline()
 
     line = phones.readline()
-    if line == '\n':
-        line = phones.readline()
 
     # iterate over entries
     previous = 0.0
     while line != '':
         try:
             time, color, phone = line.split(None, 2)
+
+            if '"' in phone:
+                phone = phone.replace('"', '')
+
+            if '+1' in phone:
+                phone = phone.replace('+1', '')
+
+            if ';' in phone:
+                phone = phone.split(';')[0]
+
+            phone = phone.strip()
+
         except ValueError:
             if line == '\n':
                 line = phones.readline()
                 continue
-            time, color = line.split()
-            phone = ''
 
-        if '"' in phone:
-            phone = phone.replace('"', '')
-        if '+1' in phone:
-            phone = phone.replace('+1', '')
-        if ';' in phone:
-            phone = phone.split(';')[0]
+            time, color = line.split()
+            phone = None
 
         time = float(time)
-        yield Phone(phone.strip(), previous, time)
+        yield Phone(phone, previous, time)
 
         previous = time
         line = phones.readline()
@@ -374,33 +384,40 @@ def process_words(words):
 
     # skip the header
     line = words.readline()
+
     while not line.startswith('#'):
         if line == '':
             raise EOFError
+
         line = words.readline()
 
     line = words.readline()
-    if line == '\n':
-        line = words.readline()
 
     # iterate over entries
     previous = 0.0
     while line != '':
         try:
             word, phonemic, phonetic, pos = (l.strip() for l in line.strip().split(';'))
+            phonemic = phonemic.split()
+            phonetic = phonetic.split()
+
         except ValueError:
+            if line == '\n':
+                line = words.readline()
+                continue
+        
             # 22 entries have missing fields, including
             # 11 CUTOFF, ERROR, E_TRANS entries
             fields = [l.strip() for l in line.strip().split(';')]
+
             if len(fields) == 2:
                 word, pos = fields
-                phonemic, phonetic = '', ''
+                phonemic = phonetic = None
+
             elif len(fields) == 3:
                 word, phonemic, pos = fields
-                phonetic = ''
-            elif line == '\n':
-                line = words.readline()
-                continue
+                phonemic = phonemic.split()
+                phonetic = None
 
         # s1801a has a missing newline in the first entry, with SIL and
         # B_TRANS on the same line with the same timestamp
@@ -415,7 +432,8 @@ def process_words(words):
         # timestamp that precedes the timestamp on the previous line
         # word.misaligned will be marked as True
 
-        yield Word(word, previous, time, phonemic.split(), phonetic.split(), pos)
+        yield Word(word, previous, time, phonemic, phonetic, pos)
+
         previous = time
         line = words.readline()
 

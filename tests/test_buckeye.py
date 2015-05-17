@@ -198,8 +198,7 @@ class TestTrack(object):
         self.track.phones[2]._Phone__beg = 0.18
         self.track.get_all_phones()
 
-        assert_equal(self.track.words[1].phones[0].seg, 'k')
-        assert_equal(len(self.track.words[1].phones), 3)
+        yield self.test_get_all_phones
 
         self.track.phones[2]._Phone__beg = 0.15
         self.track.get_all_phones()
@@ -219,8 +218,7 @@ class TestTrack(object):
         self.track.phones[4]._Phone__dur = 0.06
         self.track.get_all_phones()
 
-        assert_equal(self.track.words[1].phones[2].seg, 't')
-        assert_equal(len(self.track.words[1].phones), 3)
+        yield self.test_get_all_phones
 
         self.track.phones[4]._Phone__dur = 0.07
         self.track.get_all_phones()
@@ -258,6 +256,23 @@ class TestTrack(object):
         self.track.phones[4]._Phone__seg = 't'
         self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
         self.track.get_all_phones()
+        
+    def test_get_all_phones_right_etrans_phonetic_is_none(self):
+        # if the entry has no phonetic transcription, get_all_phones() should
+        # always include refs to special phone types (SIL etc)
+
+        self.track.phones[4]._Phone__seg = '{E_TRANS}'
+        self.track.words[1]._Word__phonetic = None
+        self.track.get_all_phones()
+
+        assert_equal(self.track.words[1].phones[0].seg, 'k')
+        assert_equal(self.track.words[1].phones[1].seg, 'ae')
+        assert_equal(self.track.words[1].phones[2].seg, '{E_TRANS}')
+        assert_equal(len(self.track.words[1].phones), 3)
+
+        self.track.phones[4]._Phone__seg = 't'
+        self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
+        self.track.get_all_phones()
 
     def test_get_all_phones_backwards_word(self):
         self.track.words[1]._Word__beg = 0.44
@@ -277,6 +292,15 @@ class TestTrack(object):
         assert_equal(self.track.words[1].phones, [])
 
         self.track.words[1]._Word__end = 0.44
+        self.track.get_all_phones()
+
+    def test_get_all_phones_phonetic_is_none(self):
+        self.track.words[1]._Word__phonetic = None
+        self.track.get_all_phones()
+
+        yield self.test_get_all_phones
+
+        self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
         self.track.get_all_phones()
 
     def test_get_logs_too_early(self):
@@ -380,7 +404,7 @@ class TestProcessLogs(object):
         lines = 'header\n#\n    0.07  121   \n'
         missing_entry = next(process_logs(StringIO(lines)))
 
-        assert_equal(missing_entry.entry, '')
+        assert_equal(missing_entry.entry, None)
         assert_equal(missing_entry.beg, 0.0)
         assert_equal(missing_entry.end, 0.07)
 
@@ -436,7 +460,7 @@ class TestProcessPhones(object):
         lines = 'header\n#\n    0.03  121   \n'
         missing_seg = next(process_phones(StringIO(lines)))
 
-        assert_equal(missing_seg.seg, '')
+        assert_equal(missing_seg.seg, None)
         assert_equal(missing_seg.beg, 0.0)
         assert_equal(missing_seg.end, 0.03)
 
@@ -502,8 +526,8 @@ class TestProcessWords(object):
         assert_equal(two_field_word.beg, 0.0)
         assert_equal(two_field_word.end, 0.15)
         assert_equal(two_field_word.orthography, 'the')
-        assert_equal(two_field_word.phonemic, [])
-        assert_equal(two_field_word.phonetic, [])
+        assert_equal(two_field_word.phonemic, None)
+        assert_equal(two_field_word.phonetic, None)
         assert_equal(two_field_word.pos, 'DT')
 
     def test_three_fields(self):
@@ -514,7 +538,7 @@ class TestProcessWords(object):
         assert_equal(three_field_word.end, 0.15)
         assert_equal(three_field_word.orthography, 'the')
         assert_equal(three_field_word.phonemic, ['dh', 'iy'])
-        assert_equal(three_field_word.phonetic, [])
+        assert_equal(three_field_word.phonetic, None)
         assert_equal(three_field_word.pos, 'DT')
 
 
