@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 from nose.tools import *
-from itertools import permutations
 
 from buckeye.containers import Word, Pause, LogEntry, Phone, Utterance
 
@@ -252,14 +251,20 @@ class TestUtterance(object):
     def test_utterance(self):
         assert_equal(self.utt.beg, 0)
         assert_equal(self.utt.end, 1.25)
-        assert_equal(self.utt.words(), self.words)
         assert_equal(self.utt.dur, 1.25 - 0)
+        assert_equal(self.utt.words(), self.words)
+        assert_equal(self.utt._Utterance__previous, 1.25)
 
     def test_empty_utterance(self):
         assert_is_none(self.empty_utt.beg)
         assert_is_none(self.empty_utt.end)
         assert_is_none(self.empty_utt.dur)
         assert_equal(self.empty_utt.words(), [])
+        assert_equal(self.empty_utt._Utterance__previous, 0.0)
+
+    @raises(ValueError)
+    def test_backwards_utterance(self):
+        utt_backwards = Utterance(self.words[::-1])
 
     @raises(AttributeError)
     def test_readonly_beg(self):
@@ -293,8 +298,39 @@ class TestUtterance(object):
         assert_equal(utt_a.dur, 0.45 - 0.05)
 
     @raises(TypeError)
-    def test_append_fail(self):
+    def test_append_missing(self):
         self.utt.append('the')
+
+    @raises(ValueError)
+    def test_append_backwards(self):
+        word = Word('uh', 0.25, 0.45, ['ah'], ['ah'], 'UH')
+        self.utt.append(word)
+
+    def test_append_none(self):
+        word = Word('the', 0.05, 0.25, ['dh', 'iy'], ['dh'], 'DT')
+        utt_append_none = Utterance([word])
+
+        none_word = Word('uh', None, None, ['ah'], ['ah'], 'UH')
+        utt_append_none.append(none_word)
+        assert_equal(utt_append_none[-1], none_word)
+
+        none_beg_word = Word('uh', None, 0.5, ['ah'], ['ah'], 'UH')
+        utt_append_none.append(none_beg_word)
+        assert_equal(utt_append_none[-1], none_beg_word)
+
+        none_end_word = Word('uh', 0.5, None, ['ah'], ['ah'], 'UH')
+        utt_append_none.append(none_end_word)
+        assert_equal(utt_append_none[-1], none_end_word)
+
+    @raises(ValueError)
+    def test_append_backwards_beg_none(self):
+        word = Word('uh', None, 0.45, ['ah'], ['ah'], 'UH')
+        self.utt.append(word)
+
+    @raises(ValueError)
+    def test_append_backwards_end_none(self):
+        word = Word('uh', 0.25, None, ['ah'], ['ah'], 'UH')
+        self.utt.append(word)
 
     def test_len(self):
         assert_equal(len(self.utt), 6)
@@ -312,58 +348,85 @@ class TestUtterance(object):
         assert_equal(self.utt.speech_rate(), 4.0)
         assert_not_in(pause, self.utt)
 
-    def test_strip(self):
+    def test_strip_beg_pause(self):
         pause = Pause(beg=0, end=0.55)
-        invalid_word = Word('', 0.55, 'n/a')
-        zero_word = Word('', 0.55, 0.55)
+        utt_strip = Utterance([pause] + self.words[3:])
 
-        for bad_entry in [pause, invalid_word, zero_word]:
-            # one bad entry at the beginning
-            words = [bad_entry] + self.words
-            utt_s = Utterance(words)
+        utt_strip.strip()
 
-            utt_s.strip()
+        assert_not_in(pause, utt_strip)
+        assert_equal(utt_strip.words(), self.words[3:])
 
-            assert_not_in(bad_entry, utt_s)
-            assert_equal(self.utt.words(), self.words)
+    def test_strip_end_pause(self):
+        pause = Pause(beg=1.25, end=1.85)
+        utt_strip = Utterance(self.words + [pause])
 
-        for bad_entries in permutations([pause, invalid_word, zero_word]):
-            # multiple bad entries at the beginning
-            words = list(bad_entries) + self.words
-            utt_s = Utterance(words)
+        utt_strip.strip()
 
-            utt_s.strip()
+        assert_not_in(pause, utt_strip)
+        assert_equal(utt_strip.words(), self.words)
 
-            assert_not_in(pause, utt_s)
-            assert_not_in(invalid_word, utt_s)
-            assert_not_in(zero_word, utt_s)
-            assert_equal(self.utt.words(), self.words)
+    def test_strip_beg_invalid(self):
+        invalid = Word('', 0.55, 'n/a')
+        utt_strip = Utterance([invalid] + self.words[3:])
 
-        pause = Pause(beg=1.25, end=1.50)
-        invalid_word = Word('', 1.50, 'n/a')
-        zero_word = Word('', 1.25, 1.25)
+        utt_strip.strip()
+        
+        assert_not_in(invalid, utt_strip)
+        assert_equal(utt_strip.words(), self.words[3:])
+    
+    def test_strip_end_invalid(self):
+        invalid = Word('', 1.25, 'n/a')
+        utt_strip = Utterance(self.words + [invalid])
 
-        for bad_entry in [pause, invalid_word, zero_word]:
-            # one bad entry at the end
-            words = self.words + [bad_entry]
-            utt_s = Utterance(words)
+        utt_strip.strip()
 
-            utt_s.strip()
+        assert_not_in(invalid, utt_strip)
+        assert_equal(utt_strip.words(), self.words)
+    
+    def test_strip_beg_zero(self):
+        zero = Word('', 0.0, 0.0)
+        utt_strip = Utterance([zero] + self.words)
 
-            assert_not_in(bad_entry, utt_s)
-            assert_equal(self.utt.words(), self.words)
+        utt_strip.strip()
+        
+        assert_not_in(zero, utt_strip)
+        assert_equal(utt_strip.words(), self.words)
 
-        for bad_entries in permutations([pause, invalid_word, zero_word]):
-            # multiple bad entries at the end
-            words = self.words + list(bad_entries)
-            utt_s = Utterance(words)
+    def test_strip_end_zero(self):
+        zero = Word('', 1.25, 1.25)
+        utt_strip = Utterance(self.words + [zero])
 
-            utt_s.strip()
+        utt_strip.strip()
+        
+        assert_not_in(zero, utt_strip)
+        assert_equal(utt_strip.words(), self.words)
+        
+    def test_strip_beg_multiple(self):
+        pause = Pause(beg=0, end=0.55)
+        invalid = Word('', 0.55, None)
+        zero = Word('', 0.55, 0.55)
+        utt_strip = Utterance([pause, invalid, zero] + self.words[3:])
+        
+        utt_strip.strip()
+        
+        for entry in {pause, invalid, zero}:
+            assert_not_in(entry, utt_strip)
 
-            assert_not_in(pause, utt_s)
-            assert_not_in(invalid_word, utt_s)
-            assert_not_in(zero_word, utt_s)
-            assert_equal(self.utt.words(), self.words)
+        assert_equal(utt_strip.words(), self.words[3:])
+    
+    def test_strip_end_multiple(self):
+        pause = Pause(beg=1.25, end=1.95)
+        invalid = Word('', 1.95, None)
+        zero = Word('', 1.95, 1.95)
+        utt_strip = Utterance(self.words + [pause, invalid, zero])
+        
+        utt_strip.strip()
+        
+        for entry in {pause, invalid, zero}:
+            assert_not_in(entry, utt_strip)
+
+        assert_equal(utt_strip.words(), self.words)
 
     def test_update_timestamps(self):
         self.empty_utt.update_timestamps()

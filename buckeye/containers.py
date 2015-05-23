@@ -345,10 +345,22 @@ class Utterance(object):
     def __init__(self, words=None):
         self.__beg = None
         self.__end = None
+        
+        self.__previous = 0.0
 
         if words is None:
             self.__words = []
+
         else:
+            for word in words:
+                self.__check_word_timestamps(word)
+
+                if word.end is not None:
+                    self.__previous = word.end
+
+                elif word.beg is not None:
+                    self.__previous = word.beg
+
             self.__words = words
             self.update_timestamps()
 
@@ -377,20 +389,46 @@ class Utterance(object):
         return self.__dur
 
     def words(self):
-        """Returns the list of entries in this utterance"""
-
         return self.__words
 
-    def append(self, word):
-        """Appends an instance to the list of entries in this utterance,
-        and updates the utterance `beg', `end', and `dur' properties.
-        The instance must have a `beg' and `end' attribute to be appended.
-        """
-
-        if not (hasattr(word, 'beg') and hasattr(word, 'end')):
+    def __check_word_timestamps(self, word):
+        if not hasattr(word, 'beg'):
             raise TypeError('object must have beg and end attributes'
                             ' to append to Utterance')
+
+        if not hasattr(word, 'end'):
+            raise TypeError('object must have beg and end attributes'
+                            ' to append to Utterance')
+
+        if word.beg < self.__previous and word.beg is not None:
+            raise ValueError('Word beg timestamp: {0} is before last '
+                             'Utterance timestamp: {1}'
+                             .format(str(word.beg), str(self.__previous)))
+
+        if word.end < self.__previous and word.end is not None:
+            raise ValueError('Word end timestamp: {0} is before last '
+                             'Utterance timestamp: {1}'
+                             .format(str(word.end), str(self.__previous)))
+
+        if word.beg > word.end and word.end is not None:
+            raise ValueError('Word beg timestamp: {0} is after Word '
+                             'end timestamp: {1}'
+                             .format(str(word.beg), str(word.end)))
+
+    def append(self, word):
+        """Appends an instance to the list of entries in this utterance, and
+        updates the utterance `beg', `end', and `dur' properties.
+        """
+
+        self.__check_word_timestamps(word)
         self.__words.append(word)
+
+        if word.end is not None:
+            self.__previous = word.end
+
+        elif word.beg is not None:
+            self.__previous = word.beg
+
         self.update_timestamps()
 
     def __iter__(self):
