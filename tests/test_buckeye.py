@@ -593,6 +593,8 @@ class TestWordsToUtterances(object):
         utterances = list(words_to_utterances(words))
 
         assert_equal(len(utterances), 2)
+        assert_equal(len(utterances[0]), 5)
+        assert_equal(len(utterances[1]), 1)
 
         for i, word in enumerate(utterances[0]):
             assert_equal(words[i].beg, word.beg)
@@ -608,7 +610,6 @@ class TestWordsToUtterances(object):
         assert_equal(words[6].phonetic, utterances[1][0].phonetic)
 
     def test_short_medial_pause(self):
-        # insert a pause into a copy of the word list
         words = self.words[:]
         words[5:] = [Word('<SIL>', 0.91, 1.0, 'S', 'S'),
                      Word('mat', 1.0, 1.28, ['m', 'ae', 't'], ['m', 'ae', 't'])]
@@ -644,3 +645,27 @@ class TestWordsToUtterances(object):
         assert_equal(words[7].orthography, utterances[1][0].orthography)
         assert_equal(words[7].phonemic, utterances[1][0].phonemic)
         assert_equal(words[7].phonetic, utterances[1][0].phonetic)
+
+    def test_sep_arg(self):
+        words = self.words[:]
+        words[5:] = [Word('<SIL>', 0.91, 1.0, 'S', 'S'),
+                     Word('mat', 1.0, 1.28, ['m', 'ae', 't'], ['m', 'ae', 't'])]
+
+        utterances = list(words_to_utterances(words, sep=0.08))
+
+        assert_equal(len(utterances), 2)
+        assert_equal(len(utterances[0]), 5)
+        assert_equal(len(utterances[1]), 1)
+
+        for i, word in enumerate(utterances[0]):
+            assert_equal(words[i].beg, word.beg)
+            assert_equal(words[i].end, word.end)
+            assert_equal(words[i].orthography, word.orthography)
+            assert_equal(words[i].phonemic, word.phonemic)
+            assert_equal(words[i].phonetic, word.phonetic)
+
+        assert_equal(words[6].beg, utterances[1][0].beg)
+        assert_equal(words[6].end, utterances[1][0].end)
+        assert_equal(words[6].orthography, utterances[1][0].orthography)
+        assert_equal(words[6].phonemic, utterances[1][0].phonemic)
+        assert_equal(words[6].phonetic, utterances[1][0].phonetic)

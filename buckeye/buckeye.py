@@ -431,7 +431,7 @@ def process_words(words):
         previous = time
         line = words.readline()
 
-def words_to_utterances(words):
+def words_to_utterances(words, sep=0.5):
     """Generator that takes an iterable of Word instances, such as
     process_words(), and yields Utterance instances containing lists
     of Word and Pause instances.
@@ -440,17 +440,21 @@ def words_to_utterances(words):
     vocal noise or speech errors, etc., are replaced by Pause instances
     in the Utterance. A new Utterance is created at the start of the
     iterable passed to words_to_utterances(), and then whenever there
-    is a sequence of non-word entries that add up to 0.5 seconds or more
+    is a sequence of non-word entries that add up to `sep` seconds or more
     of duration.
 
     Arguments:
         words:      iterable of only Word instances
+        sep:        if more than `sep` seconds of non-word entries occur
+                    consecutively, yield the current Utterance instance
+                    and begin a new one. Defaults to 0.5.
 
     Yields:
         Utterance instances for each sequence of word entries delimited by
-        >= 0.5 seconds of non-word entries. Non-word entries, or word
-        entries with invalid timestamps, are stripped from the beginning
-        and end of the words list belonging to each yielded Utterance.
+        >= `sep` seconds (default 0.5) of non-word entries. Non-word entries,
+        or word entries with invalid timestamps, are stripped from the
+        beginning and end of the words list belonging to each yielded
+        Utterance.
     """
 
     utt = Utterance()
@@ -484,7 +488,7 @@ def words_to_utterances(words):
 
         # if the total pause duration has reached 500 ms,
         # return this utterance and start a new one
-        if pause_duration >= 0.5:
+        if pause_duration >= sep:
             yield utt.strip()
             utt = Utterance()
             pause_duration = 0.0
