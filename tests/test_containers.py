@@ -399,7 +399,7 @@ class TestUtterance(object):
 
     def test_repr(self):
         expected_repr = ("Utterance(["
-                          "Word('the', 0, 0.1, ['dh', 'iy'], ['dh'], 'DT'), "
+                          "Word('the', 0.0, 0.1, ['dh', 'iy'], ['dh'], 'DT'), "
                           "Word('cat', 0.1, 0.39, ['k', 'ae', 't'], ['k', 'ae', 't'], 'NN'), "
                           "Word('is', 0.39, 0.55, ['ih', 'z'], ['ih', 'z'], 'VB'), "
                           "Word('on', 0.55, 0.73, ['aa', 'n'], ['aan'], 'IN'), "

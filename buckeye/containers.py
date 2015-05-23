@@ -14,8 +14,10 @@ class Word(object):
     Arguments:
         orthography:    orthography of the word, or another label for
                         this entry
-        beg:            timestamp where this word begins
-        end:            timestamp where this word ends
+        beg:            timestamp where this word begins. Coerced to float, or
+                        None if coercion fails.
+        end:            timestamp where this word ends. Coerced to float, or
+                        None if coercion fails.
         phonemic:       ordered iterable with the segments in the word's
                         dictionary or citation form. Defaults to None.
         phonetic:       ordered iterable with the segments in a close
@@ -41,8 +43,17 @@ class Word(object):
     def __init__(self, orthography, beg, end,
                  phonemic=None, phonetic=None, pos=None):
         self.__orthography = orthography
-        self.__beg = beg
-        self.__end = end
+
+        try:
+            self.__beg = float(beg)
+        except (TypeError, ValueError):
+            self.__beg = None
+
+        try:
+            self.__end = float(end)
+        except (TypeError, ValueError):
+            self.__end = None
+
         self.__phonemic = phonemic
         self.__phonetic = phonetic
         self.__pos = pos
@@ -159,8 +170,10 @@ class Pause(object):
 
     Arguments:
         entry:          label for this entry. Defaults to None.
-        beg:            timestamp where this entry begins. Defaults to None.
-        end:            timestamp where this entry ends. Defaults to None.
+        beg:            timestamp where this entry begins. Coerced to float,
+                        or None if coercion fails. Defaults to None.
+        end:            timestamp where this entry ends. Coerced to float, or
+                        None if coercion fails. Defaults to None.
 
     Properties:
         All arguments are stored as read-only properties.
@@ -168,8 +181,16 @@ class Pause(object):
 
     def __init__(self, entry=None, beg=None, end=None):
         self.__entry = entry
-        self.__beg = beg
-        self.__end = end
+
+        try:
+            self.__beg = float(beg)
+        except (TypeError, ValueError):
+            self.__beg = None
+
+        try:
+            self.__end = float(end)
+        except (TypeError, ValueError):
+            self.__end = None
 
     def __repr__(self):
         return 'Pause({}, {}, {})'.format(repr(self.entry), self.beg, self.end)
@@ -205,8 +226,16 @@ class LogEntry(object):
 
     def __init__(self, entry, beg=None, end=None):
         self.__entry = entry
-        self.__beg = beg
-        self.__end = end
+
+        try:
+            self.__beg = float(beg)
+        except (TypeError, ValueError):
+            self.__beg = None
+
+        try:
+            self.__end = float(end)
+        except (TypeError, ValueError):
+            self.__end = None
 
         try:
             self.__dur = self.__end - self.__beg
@@ -242,8 +271,10 @@ class Phone(object):
 
     Arguments:
         seg:            transcription label for this segment
-        beg:            timestamp where this segment begins. Defaults to None.
-        end:            timestamp where this segment ends. Defaults to None.
+        beg:            timestamp where this segment begins. Coerced to float,
+                        or None if coercion fails. Defaults to None.
+        end:            timestamp where this segment ends. Coerced to float,
+                        or None if coercion fails. Defaults to None.
 
     Propreties:
         All arguments are stored as read-only properties, in addition to
@@ -256,8 +287,16 @@ class Phone(object):
 
     def __init__(self, seg, beg=None, end=None):
         self.__seg = seg
-        self.__beg = beg
-        self.__end = end
+
+        try:
+            self.__beg = float(beg)
+        except (TypeError, ValueError):
+            self.__beg = None
+
+        try:
+            self.__end = float(end)
+        except (TypeError, ValueError):
+            self.__end = None
 
         try:
             self.__dur = self.__end - self.__beg
@@ -408,26 +447,19 @@ class Utterance(object):
     def update_timestamps(self):
         """Resets the `beg' and `end' properties of this Utterance instance
         to the beginning timestamp of the first entry and the ending
-        timestamp of the final entry, respectively. If a timestamp is not
-        a float or an integer, or if there are no entries in the list,
-        `beg' and/or `end' will be set to None instead. This method also
-        resets the `dur' property of the Utterance instance based on the
-        new `beg' and `end' values.
+        timestamp of the final entry, respectively. If a timestamp is None, or
+        if there are no entries in the list, `beg' and/or `end' will be set to
+        None instead. This method also resets the `dur' property of the
+        Utterance instance based on the new `beg' and `end' values.
         """
 
         try:
-            if type(self.__words[0].beg) in (float, int):
-                self.__beg = self.__words[0].beg
-            else:
-                self.__beg = None
+            self.__beg = self.__words[0].beg
         except IndexError:
             self.__beg = None
 
         try:
-            if type(self.__words[-1].end) in (float, int):
-                self.__end = self.__words[-1].end
-            else:
-                self.__end = None
+            self.__end = self.__words[-1].end
         except IndexError:
             self.__end = None
 
