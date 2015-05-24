@@ -652,6 +652,24 @@ class TestWordsToUtterances(object):
             assert_equal(words[i].orthography, word.orthography)
             assert_equal(words[i].phonemic, word.phonemic)
             assert_equal(words[i].phonetic, word.phonetic)
+            
+    def test_multiple_short_medial_pauses(self):
+        words = self.words[:]
+        words[3:] = [Pause('<VOCNOISE>', 0.59, 0.65),
+                     Word('on', 0.65, 0.77, ['aa', 'n'], ['aa', 'n']),
+                     self.words[4],
+                     Pause('<SIL>', 0.91, 1.35),
+                     Word('mat', 1.35, 1.63, ['m', 'ae', 't'], ['m', 'ae', 't'])]
+
+        utterances = list(words_to_utterances(words))
+
+        assert_equal(len(utterances), 1)
+        assert_equal(words[3].entry, utterances[0][3].entry)
+        assert_equal(words[6].entry, utterances[0][6].entry)
+
+        for i, word in enumerate(utterances[0]):
+            assert_equal(words[i].beg, word.beg)
+            assert_equal(words[i].end, word.end)
 
     def test_sep_arg(self):
         words = self.words[:]

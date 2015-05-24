@@ -467,8 +467,6 @@ def words_to_utterances(words, sep=0.5):
             if len(utt) == 0:
                 continue
 
-            pause = True
-
             # if this item doesn't follow another pause, restart the
             # pause duration
             if not pause:
@@ -477,6 +475,8 @@ def words_to_utterances(words, sep=0.5):
             # otherwise, add it to the cumulative pause duration
             else:
                 pause_duration += word.dur
+
+            pause = True
 
         else:
             pause = False
