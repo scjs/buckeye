@@ -99,6 +99,10 @@ class TestWord(object):
         misaligned_word.phones = [phone_dh]
         assert_true(misaligned_word.misaligned)
 
+    def test_misaligned_zero(self):
+        zero_word = Word('', 0.40, 0.40)
+        assert_false(zero_word.misaligned)
+
     def test_repr(self):
         assert_equal(repr(self.word), "Word('the', 0.05, 0.25, ['dh', 'iy'], ['dh'], 'DT')")
 
@@ -109,10 +113,10 @@ class TestWord(object):
 class TestPause(object):
 
     def setup(self):
-        self.pause = Pause('SIL', 0.0, 0.05)
+        self.pause = Pause('<SIL>', 0.0, 0.05)
 
     def test_pause(self):
-        assert_equal(self.pause.entry, 'SIL')
+        assert_equal(self.pause.entry, '<SIL>')
         assert_equal(self.pause.beg, 0.0)
         assert_equal(self.pause.end, 0.05)
 
@@ -135,11 +139,35 @@ class TestPause(object):
     def test_readonly_end(self):
         self.pause.end = 1.0
 
+    def test_phones_setter(self):
+        assert_false(self.pause.misaligned)
+
+        phone_sil = Phone('SIL')
+
+        self.pause.phones = [phone_sil]
+        assert_in(phone_sil, self.pause.phones)
+        assert_false(self.pause.misaligned)
+
+        self.pause.phones = []
+        assert_false(self.pause.misaligned)
+
+    def test_misaligned(self):
+        misaligned_pause = Pause('', 0.50, 0.25)
+        assert_true(misaligned_pause.misaligned)
+
+        phone_sil = Phone('SIL')
+        misaligned_pause.phones = [phone_sil]
+        assert_true(misaligned_pause.misaligned)
+
+    def test_misaligned_zero(self):
+        zero_pause = Pause('', 0.40, 0.40)
+        assert_false(zero_pause.misaligned)
+
     def test_repr(self):
-        assert_equal(repr(self.pause), "Pause('SIL', 0.0, 0.05)")
+        assert_equal(repr(self.pause), "Pause('<SIL>', 0.0, 0.05)")
 
     def test_str(self):
-        assert_equal(str(self.pause), '<Pause SIL at 0.0>')
+        assert_equal(str(self.pause), '<Pause <SIL> at 0.0>')
 
 
 class TestLogEntry(object):
@@ -309,18 +337,22 @@ class TestUtterance(object):
     def test_append_none(self):
         word = Word('the', 0.05, 0.25, ['dh', 'iy'], ['dh'], 'DT')
         utt_append_none = Utterance([word])
+        assert_equal(utt_append_none._Utterance__previous, 0.25)
 
         none_word = Word('uh', None, None, ['ah'], ['ah'], 'UH')
         utt_append_none.append(none_word)
         assert_equal(utt_append_none[-1], none_word)
+        assert_equal(utt_append_none._Utterance__previous, 0.25)
 
         none_beg_word = Word('uh', None, 0.5, ['ah'], ['ah'], 'UH')
         utt_append_none.append(none_beg_word)
         assert_equal(utt_append_none[-1], none_beg_word)
+        assert_equal(utt_append_none._Utterance__previous, 0.5)
 
-        none_end_word = Word('uh', 0.5, None, ['ah'], ['ah'], 'UH')
+        none_end_word = Word('uh', 0.65, None, ['ah'], ['ah'], 'UH')
         utt_append_none.append(none_end_word)
         assert_equal(utt_append_none[-1], none_end_word)
+        assert_equal(utt_append_none._Utterance__previous, 0.65)
 
     @raises(ValueError)
     def test_append_backwards_beg_none(self):

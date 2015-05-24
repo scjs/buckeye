@@ -176,7 +176,14 @@ class Pause(object):
                         None if coercion fails. Defaults to None.
 
     Properties:
-        All arguments are stored as read-only properties.
+        All arguments are stored as read-only properties, in addition to
+        the following.
+
+        dur:            time from the beginning to the end of this pause,
+                        or None if the duration cannot be calculated
+        phones:         defaults to None, but may be set to an ordered
+                        iterable containing Phone instances
+        misaligned:     True if `dur' is negative, otherwise False.
     """
 
     def __init__(self, entry=None, beg=None, end=None):
@@ -192,6 +199,18 @@ class Pause(object):
         except (TypeError, ValueError):
             self.__end = None
 
+        self.__misaligned = False
+
+        try:
+            self.__dur = self.__end - self.__beg
+            if self.__dur < 0:
+                self.__misaligned = True
+
+        except TypeError:
+            self.__dur = None
+
+        self.__phones = None
+
     def __repr__(self):
         return 'Pause({}, {}, {})'.format(repr(self.entry), self.beg, self.end)
 
@@ -203,12 +222,28 @@ class Pause(object):
         return self.__entry
 
     @property
+    def phones(self):
+        return self.__phones
+
+    @phones.setter
+    def phones(self, phones):
+        self.__phones = phones
+
+    @property
+    def misaligned(self):
+        return self.__misaligned
+
+    @property
     def beg(self):
         return self.__beg
 
     @property
     def end(self):
         return self.__end
+
+    @property
+    def dur(self):
+        return self.__dur
 
 
 class LogEntry(object):
@@ -345,7 +380,7 @@ class Utterance(object):
     def __init__(self, words=None):
         self.__beg = None
         self.__end = None
-        
+
         self.__previous = 0.0
 
         if words is None:

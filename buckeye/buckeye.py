@@ -178,22 +178,20 @@ class Track(object):
 
     def get_all_phones(self):
         """Finds the slice of Phone instances in self.phones that belong to
-        of each Word instance in this track. Adds a list of references in
-        each Word instance to its matching Phone instances as the word's
-        `phones' attribute.
+        of each Word or Pause instance in this track. Adds a list of
+        references in each Word or Pause instance to its matching Phone
+        instances as the word's `phones' attribute.
 
         Each Word instance will also have a `misaligned' attribute that is
         False if the list of matching Phone instances corresponds to the
-        word's phonetic transcription in its `phonetic' attribute, True if
-        it does not, or None if the get_all_phones() method has not been
-        called.
+        word's phonetic transcription in its `phonetic' attribute, or True if
+        it does not (or True if the word has a negative duration).
 
         The boundaries for the phone entries in the .phones files don't
         always line up exactly with the word boundaries in the .words files.
-        This method treats a phone as belonging to a word if at least half
-        of the phone overlaps with the word. The method checks for B_TRANS,
-        E_TRANS, VOCNOISE, or LAUGH tokens that halfway overlap with the
-        word, and excludes them from the list of Phone references.
+        This method treats a phone as belonging to a Word or Pause instance if
+        at least half of the phone overlaps with the word, and (for Word
+        instances only) if the phone is not a B_TRANS, VOCNOISE, or LAUGH.
         """
 
         phone_mids = [p.beg + 0.5 * p.dur for p in self.phones]
@@ -205,7 +203,8 @@ class Track(object):
 
             # 21 tracks have a B_TRANS or E_TRANS marker that overlaps a word
             # 3 tracks have overlapping VOCNOISE and 1 has overlapping LAUGH
-            if word.phonetic and phones and len(word.phonetic) != len(phones):
+            if (hasattr(word, 'phonetic') and word.phonetic and phones and
+                    len(word.phonetic) != len(phones)):
                 if phones[0].seg in ('{B_TRANS}', 'VOCNOISE', 'LAUGH'):
                     left = left + 1
                     phones = self.phones[left:right]
@@ -364,19 +363,18 @@ def process_phones(phones):
         line = phones.readline()
 
 def process_words(words):
-    """Generator that takes a Buckeye .words corpus file and yields Word
-    instances in the order that they appear.
+    """Generator that takes a Buckeye .words corpus file and yields Word and
+    Pause instances in the order that they appear.
 
-    Non-word entries (such as `B_TRANS' entries) are also yielded as Word
-    instances. Use words_to_utterances() or another function to convert
-    these to Pause instances instead.
+    Non-word entries (such as `<B_TRANS>` entries) are yielded as Pause
+    instances.
 
     Arguments:
         words:      open file(-like) instance created from a .words file
                     in the Buckeye Corpus
 
     Yields:
-        Word instances for each sequential entry in the .words file.
+        Word and Pause instances for each sequential entry in the .words file
     """
 
     # skip the header
@@ -402,7 +400,7 @@ def process_words(words):
             if line == '\n':
                 line = words.readline()
                 continue
-        
+
             # 22 entries have missing fields, including
             # 11 CUTOFF, ERROR, E_TRANS entries
             fields = [l.strip() for l in line.strip().split(';')]
@@ -426,33 +424,33 @@ def process_words(words):
         # timestamp that precedes the timestamp on the previous line
         # word.misaligned will be marked as True
 
-        yield Word(word, previous, time, phonemic, phonetic, pos)
+        if word.startswith('<') or word.startswith('{'):
+            yield Pause(word, previous, time)
+
+        else:
+            yield Word(word, previous, time, phonemic, phonetic, pos)
 
         previous = time
         line = words.readline()
 
 def words_to_utterances(words, sep=0.5):
-    """Generator that takes an iterable of Word instances, such as
-    process_words(), and yields Utterance instances containing lists
-    of Word and Pause instances.
+    """Generator that takes an iterable of Word and Pause instances, such as
+    process_words(), and packs them into Utterance instances.
 
-    Non-word entries such as `B_TRANS' and `SIL', interviewer speech,
-    vocal noise or speech errors, etc., are replaced by Pause instances
-    in the Utterance. A new Utterance is created at the start of the
-    iterable passed to words_to_utterances(), and then whenever there
-    is a sequence of non-word entries that add up to `sep` seconds or more
-    of duration.
+    A new Utterance is created at the start of the iterable passed to
+    words_to_utterances(), and then whenever there is a sequence of Pause
+    instances that add up to `sep` seconds or more of duration.
 
     Arguments:
-        words:      iterable of only Word instances
-        sep:        if more than `sep` seconds of non-word entries occur
+        words:      iterable of Word and Pause instances
+        sep:        if more than `sep` seconds of Pause instances occur
                     consecutively, yield the current Utterance instance
                     and begin a new one. Defaults to 0.5.
 
     Yields:
         Utterance instances for each sequence of word entries delimited by
-        >= `sep` seconds (default 0.5) of non-word entries. Non-word entries,
-        or word entries with invalid timestamps, are stripped from the
+        >= `sep` seconds (default 0.5) of Pause instances. Pause instances, or
+        Word instances with invalid timestamps, are stripped from the
         beginning and end of the words list belonging to each yielded
         Utterance.
     """
@@ -460,36 +458,36 @@ def words_to_utterances(words, sep=0.5):
     utt = Utterance()
     pause_duration = 0.0
     pause = False
+
     for word in words:
         # if this item is a pause token (or a bad Word entry)...
-        if re.match(PAUSE_RE, word.orthography) or not word.phonetic:
+        if isinstance(word, Pause) or not word.phonetic:
+
             # skip it if there are no words in the utterance yet
             if len(utt) == 0:
                 continue
 
-            # if this item doesn't follow another pause,
-            # restart the cumulative pause duration
+            pause = True
+
+            # if this item doesn't follow another pause, restart the
+            # pause duration
             if not pause:
                 pause_duration = word.dur
 
-            # if this item does follow another pause,
-            # add it to the cumulative pause duration
+            # otherwise, add it to the cumulative pause duration
             else:
                 pause_duration += word.dur
 
-            # append this item as a pause
-            pause = True
-            utt.append(Pause(word.orthography, word.beg, word.end))
-
-        # if this is not a pause token, append this item as a word
         else:
             pause = False
-            utt.append(word)
 
-        # if the total pause duration has reached 500 ms,
-        # return this utterance and start a new one
+        utt.append(word)
+
+        # if the total pause duration has reached `sep` seconds, return this
+        # utterance and start a new one
         if pause_duration >= sep:
             yield utt.strip()
+
             utt = Utterance()
             pause_duration = 0.0
 

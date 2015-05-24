@@ -14,7 +14,7 @@ from buckeye import words_to_utterances
 
 from buckeye import Speaker, Track
 
-from buckeye.containers import Word
+from buckeye.containers import Pause, Word
 
 LOG = """header
 #
@@ -523,6 +523,15 @@ class TestProcessWords(object):
 
         yield self.check_expected, words_spaced
 
+    def test_pause_in_words(self):
+        pause_line = '\n    0.44  121 <SIL>; S; S; null'
+        with_pause_entry = pause_line.join([WORDS[:44], WORDS[82:]])
+        words_paused = list(process_words(StringIO(with_pause_entry)))
+
+        assert_equal(words_paused[1].beg, 0.15)
+        assert_equal(words_paused[1].end, 0.44)
+        assert_equal(words_paused[1].entry, '<SIL>')
+
     def test_two_fields(self):
         lines = 'header\n#\n0.15  121 the; DT\n'
         two_field_word = next(process_words(StringIO(lines)))
@@ -573,13 +582,13 @@ class TestWordsToUtterances(object):
         yield self.check_expected, utterances
 
     def test_initial_pause(self):
-        initial_pause = Word('<SIL>', 0.0, 0.05, 'S', 'S')
+        initial_pause = Pause('<SIL>', 0.0, 0.05)
         utterances = list(words_to_utterances([initial_pause] + self.words))
 
         yield self.check_expected, utterances
 
     def test_final_pause(self):
-        final_pause = Word('<SIL>', 1.19, 1.25, 'S', 'S')
+        final_pause = Pause('<SIL>', 1.19, 1.25)
         utterances = list(words_to_utterances(self.words + [final_pause]))
 
         yield self.check_expected, utterances
@@ -587,7 +596,7 @@ class TestWordsToUtterances(object):
     def test_medial_pause(self):
         # insert a pause into a copy of the word list
         words = self.words[:]
-        words[5:] = [Word('<SIL>', 0.91, 1.42, 'S', 'S'),
+        words[5:] = [Pause('<SIL>', 0.91, 1.42),
                      Word('mat', 1.42, 1.7, ['m', 'ae', 't'], ['m', 'ae', 't'])]
 
         utterances = list(words_to_utterances(words))
@@ -599,9 +608,6 @@ class TestWordsToUtterances(object):
         for i, word in enumerate(utterances[0]):
             assert_equal(words[i].beg, word.beg)
             assert_equal(words[i].end, word.end)
-            assert_equal(words[i].orthography, word.orthography)
-            assert_equal(words[i].phonemic, word.phonemic)
-            assert_equal(words[i].phonetic, word.phonetic)
 
         assert_equal(words[6].beg, utterances[1][0].beg)
         assert_equal(words[6].end, utterances[1][0].end)
@@ -611,13 +617,13 @@ class TestWordsToUtterances(object):
 
     def test_short_medial_pause(self):
         words = self.words[:]
-        words[5:] = [Word('<SIL>', 0.91, 1.0, 'S', 'S'),
+        words[5:] = [Pause('<SIL>', 0.91, 1.0),
                      Word('mat', 1.0, 1.28, ['m', 'ae', 't'], ['m', 'ae', 't'])]
 
         utterances = list(words_to_utterances(words))
 
         assert_equal(len(utterances), 1)
-        assert_equal(words[5].orthography, utterances[0][5].entry)
+        assert_equal(words[5].entry, utterances[0][5].entry)
 
         for i, word in enumerate(utterances[0]):
             assert_equal(words[i].beg, word.beg)
@@ -625,8 +631,8 @@ class TestWordsToUtterances(object):
 
     def test_multiple_medial_pauses(self):
         words = self.words[:]
-        words[5:] = [Word('<SIL>', 0.91, 1.0, 'S', 'S'),
-                     Word('<SIL>', 1.0, 1.42, 'S', 'S'),
+        words[5:] = [Pause('<SIL>', 0.91, 1.0),
+                     Pause('<SIL>', 1.0, 1.42),
                      Word('mat', 1.42, 1.7, ['m', 'ae', 't'], ['m', 'ae', 't'])]
 
         utterances = list(words_to_utterances(words))
@@ -640,15 +646,16 @@ class TestWordsToUtterances(object):
             assert_equal(words[i].phonemic, word.phonemic)
             assert_equal(words[i].phonetic, word.phonetic)
 
-        assert_equal(words[7].beg, utterances[1][0].beg)
-        assert_equal(words[7].end, utterances[1][0].end)
-        assert_equal(words[7].orthography, utterances[1][0].orthography)
-        assert_equal(words[7].phonemic, utterances[1][0].phonemic)
-        assert_equal(words[7].phonetic, utterances[1][0].phonetic)
+        for i, word in enumerate(utterances[1], 7):
+            assert_equal(words[i].beg, word.beg)
+            assert_equal(words[i].end, word.end)
+            assert_equal(words[i].orthography, word.orthography)
+            assert_equal(words[i].phonemic, word.phonemic)
+            assert_equal(words[i].phonetic, word.phonetic)
 
     def test_sep_arg(self):
         words = self.words[:]
-        words[5:] = [Word('<SIL>', 0.91, 1.0, 'S', 'S'),
+        words[5:] = [Pause('<SIL>', 0.91, 1.0),
                      Word('mat', 1.0, 1.28, ['m', 'ae', 't'], ['m', 'ae', 't'])]
 
         utterances = list(words_to_utterances(words, sep=0.08))
@@ -663,7 +670,7 @@ class TestWordsToUtterances(object):
             assert_equal(words[i].orthography, word.orthography)
             assert_equal(words[i].phonemic, word.phonemic)
             assert_equal(words[i].phonetic, word.phonetic)
-
+            
         assert_equal(words[6].beg, utterances[1][0].beg)
         assert_equal(words[6].end, utterances[1][0].end)
         assert_equal(words[6].orthography, utterances[1][0].orthography)
