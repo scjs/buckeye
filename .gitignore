@@ -1,5 +1,5 @@
 *.py[cod]
-*.ipynb
+.ipynb_checkpoints/
 *.coverage
 speakers/
 scratch/
