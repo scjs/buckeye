@@ -391,8 +391,10 @@ def process_words(words):
     # iterate over entries
     previous = 0.0
     while line != '':
+        fields = [l.strip() for l in line.strip().split(';')]
+
         try:
-            word, phonemic, phonetic, pos = (l.strip() for l in line.strip().split(';'))
+            word, phonemic, phonetic, pos = fields
             phonemic = phonemic.split()
             phonetic = phonetic.split()
 
@@ -401,10 +403,8 @@ def process_words(words):
                 line = words.readline()
                 continue
 
-            # 22 entries have missing fields, including
-            # 11 CUTOFF, ERROR, E_TRANS entries
-            fields = [l.strip() for l in line.strip().split(';')]
-
+            # 22 entries have missing fields, including 11 CUTOFF, ERROR, and
+            # E_TRANS entries
             if len(fields) == 2:
                 word, pos = fields
                 phonemic = phonetic = None
@@ -420,9 +420,9 @@ def process_words(words):
 
         time = float(time)
 
-        # 1603b starts at -1.0s, and 2801a has one line that has a
-        # timestamp that precedes the timestamp on the previous line
-        # word.misaligned will be marked as True
+        # 1603b starts at -1.0s, and 2801a has one line that has a timestamp
+        # that precedes the timestamp on the previous line
+        # for these entries, the misaligned attribute will be set to True
 
         if word.startswith('<') or word.startswith('{'):
             yield Pause(word, previous, time)

@@ -505,13 +505,22 @@ class Utterance(object):
         list of entries in this Utterance instance.
         """
 
-        left = next(i for i in self if type(i).__name__ == 'Word' and i.dur > 0)
-        right = next(i for i in reversed(self.__words) if type(i).__name__ == 'Word' and i.dur > 0)
+        try:
+            left = next(i for i in self
+                        if isinstance(i, Word) and
+                        i.dur is not None and i.dur > 0)
 
-        left_idx = self.__words.index(left)
-        right_idx = self.__words.index(right) + 1
+            right = next(i for i in reversed(self.__words)
+                        if isinstance(i, Word) and
+                        i.dur is not None and i.dur > 0)
 
-        self.__words = self.__words[left_idx:right_idx]
+            left_idx = self.__words.index(left)
+            right_idx = self.__words.index(right) + 1
+
+            self.__words = self.__words[left_idx:right_idx]
+
+        except StopIteration:
+            self.__words = []
 
         self.update_timestamps()
 

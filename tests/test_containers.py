@@ -460,6 +460,14 @@ class TestUtterance(object):
 
         assert_equal(utt_strip.words(), self.words)
 
+    def test_strip_pause_only(self):
+        pause = Pause(beg=1.25, end=1.95)
+        utt_strip = Utterance([pause])
+        
+        utt_strip.strip()
+        
+        assert_equal(utt_strip.words(), [])
+
     def test_update_timestamps(self):
         self.empty_utt.update_timestamps()
 
