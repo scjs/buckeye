@@ -10,5 +10,6 @@ The scripts can be installed directly from GitHub with pip using this command:
 You can also copy the `buckeye/` subdirectory into your working directory, or
 put it in your Python path.
 
-There is a tutorial in the GettingStarted notebook, and the docstrings in
-buckeye.py and containers.py have more detail.
+There is a tutorial in the
+[GettingStarted notebook](http://nbviewer.ipython.org/github/scjs/buckeye/blob/master/GettingStarted.ipynb),
+and the docstrings in buckeye.py and containers.py have more detail.
