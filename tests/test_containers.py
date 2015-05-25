@@ -327,12 +327,27 @@ class TestUtterance(object):
 
     @raises(TypeError)
     def test_append_missing(self):
-        self.utt.append('the')
+        self.empty_utt.append('the')
+
+    @raises(ValueError)
+    def test_append_before_utterance(self):
+        word = Word('uh', 0.25, 0.45, ['ah'], ['ah'], 'UH')
+        self.utt.append(word)
+
+    @raises(ValueError)
+    def test_append_before_utterance_beg_none(self):
+        word = Word('uh', None, 0.45, ['ah'], ['ah'], 'UH')
+        self.utt.append(word)
+
+    @raises(ValueError)
+    def test_append_before_utterance_end_none(self):
+        word = Word('uh', 0.25, None, ['ah'], ['ah'], 'UH')
+        self.utt.append(word)
 
     @raises(ValueError)
     def test_append_backwards(self):
-        word = Word('uh', 0.25, 0.45, ['ah'], ['ah'], 'UH')
-        self.utt.append(word)
+        word = Word('uh', 1.95, 1.65, ['ah'], ['ah'], 'UH')
+        self.empty_utt.append(word)
 
     def test_append_none(self):
         word = Word('the', 0.05, 0.25, ['dh', 'iy'], ['dh'], 'DT')
@@ -353,16 +368,6 @@ class TestUtterance(object):
         utt_append_none.append(none_end_word)
         assert_equal(utt_append_none[-1], none_end_word)
         assert_equal(utt_append_none._Utterance__previous, 0.65)
-
-    @raises(ValueError)
-    def test_append_backwards_beg_none(self):
-        word = Word('uh', None, 0.45, ['ah'], ['ah'], 'UH')
-        self.utt.append(word)
-
-    @raises(ValueError)
-    def test_append_backwards_end_none(self):
-        word = Word('uh', 0.25, None, ['ah'], ['ah'], 'UH')
-        self.utt.append(word)
 
     def test_len(self):
         assert_equal(len(self.utt), 6)
@@ -403,7 +408,7 @@ class TestUtterance(object):
         utt_strip = Utterance([invalid] + self.words[3:])
 
         utt_strip.strip()
-        
+
         assert_not_in(invalid, utt_strip)
         assert_equal(utt_strip.words(), self.words[3:])
     
@@ -421,7 +426,7 @@ class TestUtterance(object):
         utt_strip = Utterance([zero] + self.words)
 
         utt_strip.strip()
-        
+
         assert_not_in(zero, utt_strip)
         assert_equal(utt_strip.words(), self.words)
 
@@ -430,10 +435,10 @@ class TestUtterance(object):
         utt_strip = Utterance(self.words + [zero])
 
         utt_strip.strip()
-        
+
         assert_not_in(zero, utt_strip)
         assert_equal(utt_strip.words(), self.words)
-        
+
     def test_strip_beg_multiple(self):
         pause = Pause(beg=0, end=0.55)
         invalid = Word('', 0.55, None)
@@ -452,9 +457,9 @@ class TestUtterance(object):
         invalid = Word('', 1.95, None)
         zero = Word('', 1.95, 1.95)
         utt_strip = Utterance(self.words + [pause, invalid, zero])
-        
+
         utt_strip.strip()
-        
+
         for entry in {pause, invalid, zero}:
             assert_not_in(entry, utt_strip)
 
