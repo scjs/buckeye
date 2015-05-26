@@ -1,13 +1,18 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
-import mock
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
+
 from nose.tools import *
 
 import os
 import struct
-from cStringIO import StringIO
+from io import BytesIO, StringIO
 
 from buckeye import corpus, process_logs, process_phones, process_words
 from buckeye import words_to_utterances
@@ -69,7 +74,7 @@ class TestSpeaker(object):
         ZipFileMock.namelist.return_value = ['s02/s0201b.zip',
                                              's02/s0201a.zip',
                                              's02/s02.zip']
-        ZipFileMock.read.return_value = ''
+        ZipFileMock.read.return_value = b''
 
         cls.track = object()
         TrackMock.return_value = cls.track
@@ -115,16 +120,16 @@ class TestTrack(object):
 
         def read_mock(filename):
             if filename.endswith('.words'):
-                return WORDS
+                return WORDS.encode('cp1252')
 
             if filename.endswith('.phones'):
-                return PHONES
+                return PHONES.encode('cp1252')
 
             if filename.endswith('.log'):
-                return LOG
+                return LOG.encode('cp1252')
 
             if filename.endswith('.txt'):
-                return TXT
+                return TXT.encode('cp1252')
 
             if filename.endswith('.wav'):
                 return WAV
@@ -156,7 +161,7 @@ class TestTrack(object):
         assert_equal(str(self.track), '<Track s0201a>')
 
     def test_clip_wav(self):
-        wav_file = StringIO()
+        wav_file = BytesIO()
         self.track.clip_wav(wav_file, 0.0625, 0.075)
 
         wav_file.seek(44)
@@ -178,14 +183,14 @@ class TestTrack(object):
 
         assert_equal(len(wav_data), 2 * len(expected))
 
-        for i in xrange(0, len(wav_data), 2):
+        for i in range(0, len(wav_data), 2):
             val = wav_data[i:i + 2]
             val_unpacked = struct.unpack('h', val)
             assert_equal(val_unpacked[0], expected[i // 2])
 
     @raises(AttributeError)
     def test_clip_unopened_wav(self):
-        wav_file = StringIO()
+        wav_file = BytesIO()
         self.track_no_wav.clip_wav(wav_file, 0.0625, 0.075)
 
     def test_get_all_phones(self):

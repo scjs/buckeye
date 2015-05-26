@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 from bisect import bisect_left
-from cStringIO import StringIO
+from io import BytesIO, StringIO
 from os.path import basename, splitext, join
 
 import glob
@@ -76,7 +76,7 @@ class Speaker(object):
 
         for subzip in sorted(zfile.namelist()):
             if re.match(TRACK_RE, subzip):
-                track_contents = zipfile.ZipFile(StringIO(zfile.read(subzip)))
+                track_contents = zipfile.ZipFile(BytesIO(zfile.read(subzip)))
                 track = Track(subzip, track_contents, load_wavs)
                 self.tracks.append(track)
 
@@ -128,15 +128,21 @@ class Track(object):
         self.name = splitext(basename(path))[0]
         self.path = path
 
-        # store text info
-        self.words = list(process_words(StringIO(contents.read(self.name+'.words'))))
-        self.phones = list(process_phones(StringIO(contents.read(self.name+'.phones'))))
-        self.log = list(process_logs(StringIO(contents.read(self.name+'.log'))))
-        self.txt = contents.read(self.name+'.txt').splitlines()
+        # read and store text info
+        words = contents.read(self.name + '.words').decode('cp1252')
+        phones = contents.read(self.name + '.phones').decode('cp1252')
+        log = contents.read(self.name + '.log').decode('cp1252')
+        txt = contents.read(self.name + '.txt').decode('cp1252')
+
+        self.words = list(process_words(StringIO(words)))
+        self.phones = list(process_phones(StringIO(phones)))
+        self.log = list(process_logs(StringIO(log)))
+        self.txt = txt.splitlines()
 
         # optionally store the sound file
         if load_wav:
-            self.wav = wave.open(StringIO(contents.read(self.name+'.wav')))
+            wav = contents.read(self.name + '.wav')
+            self.wav = wave.open(BytesIO(wav))
 
         # add references in self.words to the corresponding self.phones
         self.get_all_phones()

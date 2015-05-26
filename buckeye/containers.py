@@ -435,17 +435,18 @@ class Utterance(object):
             raise TypeError('object must have beg and end attributes'
                             ' to append to Utterance')
 
-        if word.beg < self.__previous and word.beg is not None:
+        if word.beg is not None and word.beg < self.__previous:
             raise ValueError('Word beg timestamp: {0} is before last '
                              'Utterance timestamp: {1}'
                              .format(str(word.beg), str(self.__previous)))
 
-        if word.end < self.__previous and word.end is not None:
+        if word.end is not None and word.end < self.__previous:
             raise ValueError('Word end timestamp: {0} is before last '
                              'Utterance timestamp: {1}'
                              .format(str(word.end), str(self.__previous)))
 
-        if word.beg > word.end and word.end is not None:
+        if (word.end is not None and word.beg is not None and
+                word.beg > word.end):
             raise ValueError('Word beg timestamp: {0} is after Word '
                              'end timestamp: {1}'
                              .format(str(word.beg), str(word.end)))
@@ -511,8 +512,8 @@ class Utterance(object):
                         i.dur is not None and i.dur > 0)
 
             right = next(i for i in reversed(self.__words)
-                        if isinstance(i, Word) and
-                        i.dur is not None and i.dur > 0)
+                         if isinstance(i, Word) and
+                         i.dur is not None and i.dur > 0)
 
             left_idx = self.__words.index(left)
             right_idx = self.__words.index(right) + 1
