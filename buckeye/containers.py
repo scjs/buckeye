@@ -420,8 +420,16 @@ class Utterance(object):
         return 'Utterance({})'.format(repr(self.words()))
 
     def __str__(self):
-        utt = ' '.join([word.orthography for word in self.words()])
-        return '<Utterance "{}">'.format(utt)
+        utt = []
+
+        for word in self.__words:
+            if hasattr(word, 'orthography'):
+                utt.append(word.orthography)
+
+            else:
+                utt.append(word.entry)
+
+        return '<Utterance "{}">'.format(' '.join(utt))
 
     @property
     def beg(self):
