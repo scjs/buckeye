@@ -37,14 +37,14 @@ class TestWord(object):
     def test_missing_word(self):
         word = Word()
 
-    def test_count_syllables(self):
-        assert_equal(self.word.count_syllables(), 1)
-        assert_equal(self.word.count_syllables(phonetic=False), 1)
-        assert_equal(self.word.count_syllables(phonetic=True), 0)
+    def test_syllables(self):
+        assert_equal(self.word.syllables(), 1)
+        assert_equal(self.word.syllables(phonetic=False), 1)
+        assert_equal(self.word.syllables(phonetic=True), 0)
 
-        assert_raises(AttributeError, self.empty_word.count_syllables)
-        assert_raises(AttributeError, self.empty_word.count_syllables, False)
-        assert_raises(AttributeError, self.empty_word.count_syllables, True)
+        assert_is_none(self.empty_word.syllables())
+        assert_is_none(self.empty_word.syllables(False))
+        assert_is_none(self.empty_word.syllables(True))
 
     @raises(AttributeError)
     def test_readonly_orthography(self):

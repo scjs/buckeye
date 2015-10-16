@@ -69,6 +69,18 @@ class Word(object):
         except TypeError:
             self.__dur = None
 
+        try:
+            self.__phonemic_syllables = sum(1 for seg in self.__phonemic
+                                            if seg in SYLLABIC)
+        except TypeError:
+            self.__phonemic_syllables = None
+
+        try:
+            self.__phonetic_syllables = sum(1 for seg in self.__phonetic
+                                            if seg in SYLLABIC)
+        except TypeError:
+            self.__phonetic_syllables = None
+
     def __repr__(self):
         return 'Word({}, {}, {}, {}, {}, {})'.format(repr(self.orthography),
                                                      self.beg, self.end,
@@ -105,16 +117,27 @@ class Word(object):
 
         if self.__phonetic is None:
             self.__misaligned = True
+
         elif len(phones) != len(self.__phonetic):
             self.__misaligned = True
+
         else:
             for i, j in zip(phones, self.__phonetic):
                 if i.seg != j:
                     self.__misaligned = True
                     break
+
             else:
                 if self.__dur > 0 or self.__dur is None:
                     self.__misaligned = False
+                    return
+
+        # reaching here means that the phonetic transcription doesn't
+        # line up with the list of phones that was just set, so we need
+        # to re-count the number of phonetic syllables
+        self.__phonetic_syllables = sum(1 for phone in phones
+                                        if phone.seg in SYLLABIC)
+
 
     @property
     def misaligned(self):
@@ -132,13 +155,15 @@ class Word(object):
     def dur(self):
         return self.__dur
 
-    def count_syllables(self, phonetic=False):
-        """Returns the number of syllabic segments in the Word instance's
-        phonemic attribute.
+    def syllables(self, phonetic=False):
+        """Returns the number of syllabic segments in the Word.
 
         Arguments:
-            phonetic:   if True, returns the number of syllables in the
-                        instance's phonetic attribute. Defaults to False.
+            phonetic:   if True, returns the number of syllabic
+                        segments in the phones attribute (if defined,
+                        else uses the phonetic attribute). Defaults to
+                        False, which uses the number of syllabic
+                        segments in the phonemic attribute instead.
 
         Returns:
             Integer number of syllabic segments in the specified
@@ -146,22 +171,9 @@ class Word(object):
         """
 
         if phonetic:
-            transcription = self.__phonetic
-        else:
-            transcription = self.__phonemic
+            return self.__phonetic_syllables
 
-        syllables = 0
-
-        try:
-            for segment in transcription:
-                if segment in SYLLABIC:
-                    syllables += 1
-        except TypeError:
-            error = 'phonetic' if phonetic else 'phonemic'
-            raise AttributeError('cannot count {0} syllables when iterable {0}'
-                                 ' transcription is not defined'.format(error))
-
-        return syllables
+        return self.__phonemic_syllables
 
 
 class Pause(object):
@@ -484,19 +496,23 @@ class Utterance(object):
 
         Arguments:
             use_phonetic:   if True, this method counts syllables in each
-                            entry's `phonetic' attribute. If False, this
-                            method counts syllables in each entry's
-                            `phonemic' attribute. Defaults to True.
+                            entry's phonetic transcription, using the
+                            `phones` or `phonetic` attribute. If False,
+                            this method counts syllables in each
+                            entry's `phonemic' attribute instead.
+                            Defaults to True.
         """
 
-        if len(self.__words) == 0:
+        if not self.__words:
             return 0.0
+
         else:
             self.strip()
+
             utt_syllables = 0
             for word in self.__words:
-                if type(word).__name__ == 'Word':
-                    utt_syllables += word.count_syllables(phonetic=use_phonetic)
+                if hasattr(word, 'syllables'):
+                    utt_syllables += word.syllables(use_phonetic)
 
             return float(utt_syllables) / self.dur
 
