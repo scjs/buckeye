@@ -496,11 +496,9 @@ class Utterance(object):
     def __len__(self):
         return len(self.__words)
 
-    def speech_rate(self, use_phonetic=True):
+    def speech_rate(self, use_phonetic=True, allow_nonword_boundaries=False):
         """Returns the number of syllabic segments per second in this
-        utterance. Before returning, the strip() method is called to
-        remove Pause instances or words without a calculable duration
-        from the beginning and end of the list of entries.
+        utterance.
 
         Arguments:
             use_phonetic:   if True, this method counts syllables in each
@@ -509,20 +507,39 @@ class Utterance(object):
                             this method counts syllables in each
                             entry's `phonemic' attribute instead.
                             Defaults to True.
+
+            allow_nonword_boundaries:   if True, the speech rate is
+                            calculated over the full utterance duration,
+                            including Pause instances or other non-Word
+                            instances at the beginning or end of the
+                            utterance. If False, raises a ValueError if
+                            there are non-Word instances at the
+                            beginning or end of the utterance. Defaults
+                            to False.
         """
 
         if not self.__words:
             return 0.0
 
-        else:
-            self.strip()
+        if not allow_nonword_boundaries:
+            if not isinstance(self.__words[0], Word):
+                raise ValueError('first object in Utterance is not a Word')
 
-            utt_syllables = 0
-            for word in self.__words:
-                if hasattr(word, 'syllables'):
-                    utt_syllables += word.syllables(use_phonetic)
+            if not isinstance(self.__words[-1], Word):
+                raise ValueError('last object in Utterance is not a Word')
 
-            return float(utt_syllables) / self.dur
+        if self.dur is None:
+            raise TypeError('cannot calculate speech rate if Utterance '
+                            'duration is None')
+
+        utt_syllables = 0
+
+        for word in self.__words:
+            if hasattr(word, 'syllables'):
+                utt_syllables += word.syllables(use_phonetic)
+
+        return float(utt_syllables) / self.dur
+            
 
     def strip(self):
         """Strips all non-Word instances, or Word instances where the

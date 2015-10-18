@@ -375,15 +375,26 @@ class TestUtterance(object):
     def test_speech_rate(self):
         assert_equal(self.utt.speech_rate(), 4.0)
         assert_equal(self.utt.speech_rate(use_phonetic=False), 4.8)
-
         assert_equal(self.empty_utt.speech_rate(), 0.0)
         assert_equal(self.empty_utt.speech_rate(use_phonetic=False), 0.0)
 
-        pause = Pause(beg=1.25, end=1.50)
+    def test_speech_rate_pause_at_edge(self):
+        utt = Utterance(self.words)
+        utt.append(Pause(beg=1.25, end=1.50))
+        assert_raises(ValueError, utt.speech_rate)
 
-        self.utt.append(pause)
-        assert_equal(self.utt.speech_rate(), 4.0)
-        assert_not_in(pause, self.utt)
+    def test_speech_rate_allow_pause_at_edge(self):
+        utt = Utterance(self.words)
+        utt.append(Pause(beg=1.25, end=1.50))
+        assert_equal(utt.speech_rate(allow_nonword_boundaries=True), 10./3.)
+
+    def test_speech_rate_none_at_edge(self):
+        words = self.words[:]
+        words[0] = Word('the', None, 0.10, ['dh', 'iy'], ['dh'], 'DT')
+        utt = Utterance(words)
+
+        assert_raises(TypeError, utt.speech_rate)
+        assert_raises(TypeError, utt.speech_rate, False, True)
 
     def test_strip_beg_pause(self):
         pause = Pause(beg=0, end=0.55)
