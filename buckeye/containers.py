@@ -447,11 +447,7 @@ class Utterance(object):
         return self.__words
 
     def __check_word_timestamps(self, word):
-        if not hasattr(word, 'beg'):
-            raise TypeError('object must have beg and end attributes'
-                            ' to append to Utterance')
-
-        if not hasattr(word, 'end'):
+        if not hasattr(word, 'beg') or not hasattr(word, 'end'):
             raise TypeError('object must have beg and end attributes'
                             ' to append to Utterance')
 
@@ -496,9 +492,15 @@ class Utterance(object):
     def __len__(self):
         return len(self.__words)
 
-    def speech_rate(self, use_phonetic=True, allow_nonword_boundaries=False):
+    def speech_rate(self, use_phonetic=True, no_syllables='raise'):
         """Returns the number of syllabic segments per second in this
         utterance.
+
+        There may be pauses at the beginning or end of an utterance
+        that you do not want to include when calculating the speech
+        rate of the utterance. To ignore any pauses at the beginning
+        or end, use `no_syllables='squeeze'`. To remove them from the
+        utterance, use `utterance.strip()`.
 
         Arguments:
             use_phonetic:   if True, this method counts syllables in each
@@ -508,38 +510,58 @@ class Utterance(object):
                             entry's `phonemic' attribute instead.
                             Defaults to True.
 
-            allow_nonword_boundaries:   if True, the speech rate is
-                            calculated over the full utterance duration,
-                            including Pause instances or other non-Word
-                            instances at the beginning or end of the
-                            utterance. If False, raises a ValueError if
-                            there are non-Word instances at the
-                            beginning or end of the utterance. Defaults
-                            to False.
+            no_syllables:   must be one of `'zero'`, `'squeeze'`, or
+                            `'raise'`. Defaults to `'raise'`.
+
+                            If `'zero'`, any instances in the utterance
+                            without a `syllables` attribute are treated
+                            as having zero syllables for the speech
+                            rate calculation.
+
+                            If `'squeeze`', the same behavior as
+                            `'zero'`, plus any instances at the
+                            beginning or end of the utterance with no
+                            `syllables` attribute are ignored while
+                            summing the total utterance duration.
+
+                            If `'raise'`, a ValueError is raised if the
+                            utterance includes any instances without a
+                            `syllables` attribute.
         """
 
-        if not self.__words:
-            return 0.0
-
-        if not allow_nonword_boundaries:
-            if not isinstance(self.__words[0], Word):
-                raise ValueError('first object in Utterance is not a Word')
-
-            if not isinstance(self.__words[-1], Word):
-                raise ValueError('last object in Utterance is not a Word')
+        if no_syllables not in {'zero', 'squeeze', 'raise'}:
+            raise ValueError('"no_syllables" argument must be one of "zero", '
+                             '"squeeze", or "raise"')
 
         if self.dur is None:
             raise TypeError('cannot calculate speech rate if Utterance '
                             'duration is None')
 
-        utt_syllables = 0
+        if not self.__words:
+            return 0.0
+
+        syllable_count = 0
 
         for word in self.__words:
             if hasattr(word, 'syllables'):
-                utt_syllables += word.syllables(use_phonetic)
+                syllable_count += word.syllables(use_phonetic)
 
-        return float(utt_syllables) / self.dur
-            
+            elif no_syllables == 'raise':
+                raise ValueError('all objects in Utterance must have a '
+                                 '"syllables" attribute to calculate speech '
+                                 'rate')
+
+        if no_syllables == 'squeeze':
+            beg = next(word.beg for word in self.__words
+                       if hasattr(word, 'syllables'))
+
+            end = next(word.end for word in reversed(self.__words)
+                       if hasattr(word, 'syllables'))
+
+            return float(syllable_count) / float(end - beg)
+
+        else:
+            return float(syllable_count) / float(self.dur)
 
     def strip(self):
         """Strips all non-Word instances, or Word instances where the
@@ -579,12 +601,9 @@ class Utterance(object):
 
         try:
             self.__beg = self.__words[0].beg
-        except IndexError:
-            self.__beg = None
-
-        try:
             self.__end = self.__words[-1].end
         except IndexError:
+            self.__beg = None
             self.__end = None
 
         try:

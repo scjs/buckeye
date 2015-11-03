@@ -375,18 +375,67 @@ class TestUtterance(object):
     def test_speech_rate(self):
         assert_equal(self.utt.speech_rate(), 4.0)
         assert_equal(self.utt.speech_rate(use_phonetic=False), 4.8)
-        assert_equal(self.empty_utt.speech_rate(), 0.0)
-        assert_equal(self.empty_utt.speech_rate(use_phonetic=False), 0.0)
+        assert_raises(TypeError, self.empty_utt.speech_rate)
+        assert_raises(TypeError, self.empty_utt.speech_rate, False)
 
-    def test_speech_rate_pause_at_edge(self):
-        utt = Utterance(self.words)
-        utt.append(Pause(beg=1.25, end=1.50))
+    def test_speech_rate_pause_at_beg(self):
+        words = [Pause(beg=0, end=0.39)] + self.words[2:]
+        utt = Utterance(words)
+
+        # raises
         assert_raises(ValueError, utt.speech_rate)
+        assert_raises(ValueError, utt.speech_rate, False, 'raises')
 
-    def test_speech_rate_allow_pause_at_edge(self):
+        # zero
+        assert_equal(utt.speech_rate(no_syllables='zero'), 3.2)
+
+        # squeeze
+        assert_equal(utt.speech_rate(no_syllables='squeeze'), 4/0.86)
+
+    def test_speech_rate_pause_at_beg_and_middle(self):
+        words = [Pause(beg=0, end=0.39)] + self.words[2:]
+        words[2] = Pause(beg=0.55, end=0.73)
+        utt = Utterance(words)
+
+        # raises
+        assert_raises(ValueError, utt.speech_rate)
+        assert_raises(ValueError, utt.speech_rate, False, 'raises')
+
+        # zero
+        assert_equal(utt.speech_rate(no_syllables='zero'), 2.4)
+
+        # squeeze
+        assert_equal(utt.speech_rate(no_syllables='squeeze'), 3/0.86)
+
+    def test_speech_rate_pause_at_end(self):
         utt = Utterance(self.words)
         utt.append(Pause(beg=1.25, end=1.50))
-        assert_equal(utt.speech_rate(allow_nonword_boundaries=True), 10./3.)
+
+        # raises
+        assert_raises(ValueError, utt.speech_rate)
+        assert_raises(ValueError, utt.speech_rate, False, 'raises')
+
+        # zero
+        assert_equal(utt.speech_rate(no_syllables='zero'), 10/3)
+
+        # squeeze
+        assert_equal(utt.speech_rate(no_syllables='squeeze'), 4.0)
+
+    def test_speech_rate_pause_at_end_and_middle(self):
+        words = self.words + [Pause(beg=1.25, end=1.50)]
+        words[-3] = Pause(beg=0.73, end=0.80)
+
+        utt = Utterance(words)
+
+        # raises
+        assert_raises(ValueError, utt.speech_rate)
+        assert_raises(ValueError, utt.speech_rate, False, 'raises')
+
+        # zero
+        assert_equal(utt.speech_rate(no_syllables='zero'), 8/3)
+
+        # squeeze
+        assert_equal(utt.speech_rate(no_syllables='squeeze'), 4/1.25)
 
     def test_speech_rate_none_at_edge(self):
         words = self.words[:]
@@ -394,7 +443,8 @@ class TestUtterance(object):
         utt = Utterance(words)
 
         assert_raises(TypeError, utt.speech_rate)
-        assert_raises(TypeError, utt.speech_rate, False, True)
+        assert_raises(TypeError, utt.speech_rate, False, 'zero')
+        assert_raises(TypeError, utt.speech_rate, False, 'squeeze')
 
     def test_strip_beg_pause(self):
         pause = Pause(beg=0, end=0.55)
