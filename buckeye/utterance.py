@@ -1,3 +1,7 @@
+"""Container for a chunk of speech bounded by long pauses.
+
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -7,19 +11,24 @@ from .containers import Word, Pause
 
 
 class Utterance(object):
-    """Container for a list of entries, such as Word and Pause instances,
+    """Iterable of Word and Pause instances comprising one chunk of speech.
+
+    Parameters
+    ----------
+    words : list of Word and Pause, optional
+        List of Word and Pause instances that comprise one speech chunk.
+        Default is None.
+
+    Attributes
+    ----------
+    beg
+    end
+    dur
+    words
+
+    Container for a list of entries, such as Word and Pause instances,
     that make up an utterance in the speech corpus.
 
-    Arguments:
-        words:      optional ordered iterable of Word and Pause instances.
-                    Entries can also be appended individually using the
-                    append() method.
-
-    Properties:
-        beg:        beginning time of the first word in the utterance
-        end:        ending time of the last word in the utterance
-        dur:        time from the beginning to the end of the utterance,
-                    or None if the duration cannot be calculated
     """
 
     def __init__(self, words=None):
@@ -61,14 +70,17 @@ class Utterance(object):
 
     @property
     def beg(self):
+        """Timestamp where the first item in the utterance begins."""
         return self.__beg
 
     @property
     def end(self):
+        """Timestamp where the last item in the utterance ends."""
         return self.__end
 
     @property
     def dur(self):
+        """Duration of the utterance, or None if it cannot be calculated."""
         try:
             return self.__end - self.__beg
 
@@ -76,9 +88,26 @@ class Utterance(object):
             return None
 
     def words(self):
+        """Chronological list of Word and Pause instances in this utterance."""
         return self.__words
 
     def __check_word_timestamps(self, word):
+        """
+        Private method to check whether an instance can be added to this
+        utterance. It must meet the following requirements:
+
+        1. Has `beg` and `end` attributes
+        2. The instance `beg` time must be greater or equal to the end of the
+        last word in the utterance (or None).
+        3. The instance `end` time must be greater or equal to the end of the
+        last word in the utterance (or None).
+        4. The instance `end` time must be greater or equal to the `beg` time
+        of the instance.
+
+        If the instance doesn't meet all requirements, an exception is raised.
+
+        """
+
         if not hasattr(word, 'beg') or not hasattr(word, 'end'):
             raise TypeError('object must have beg and end attributes'
                             ' to append to Utterance')
@@ -100,8 +129,19 @@ class Utterance(object):
                              .format(str(word.beg), str(word.end)))
 
     def append(self, word):
-        """Appends an instance to the list of entries in this utterance, and
-        updates the utterance `beg', `end', and `dur' properties.
+        """Append an instance to this utterance, and update the `beg` and
+        `end` attributes of the utterance.
+
+        Parameters
+        ----------
+        word : Word or Pause instance
+            Instance with `beg` and `end` attributes to be added to this
+            utterance.
+
+        Returns
+        -------
+        None
+
         """
 
         self.__check_word_timestamps(word)
@@ -125,8 +165,7 @@ class Utterance(object):
         return len(self.__words)
 
     def speech_rate(self, use_phonetic=True, no_syllables='raise'):
-        """Returns the number of syllabic segments per second in this
-        utterance.
+        """Return the number of syllables per second in this utterance.
 
         There may be pauses at the beginning or end of an utterance
         that you do not want to include when calculating the speech
@@ -134,31 +173,33 @@ class Utterance(object):
         or end, use `no_syllables='squeeze'`. To remove them from the
         utterance, use `utterance.strip()`.
 
-        Arguments:
-            use_phonetic:   if True, this method counts syllables in each
-                            entry's phonetic transcription, using the
-                            `phones` or `phonetic` attribute. If False,
-                            this method counts syllables in each
-                            entry's `phonemic' attribute instead.
-                            Defaults to True.
+        Parameters
+        ----------
+        use_phonetic: bool, optional
+            If True, this method counts syllables in the close phonetic
+            transcriptions of the items in this utterance (see
+            `Word.syllables`). If False, use the phonemic attribute to
+            count syllables instead. Default is True.
 
-            no_syllables:   must be one of `'zero'`, `'squeeze'`, or
-                            `'raise'`. Defaults to `'raise'`.
+        no_syllables : {'zero', 'squeeze', 'raise'}
+            If 'zero', any items in the utterance without a
+            `syllables` property are treated as having zero syllables
+            for the speech rate calculation. Default is 'zero'.
 
-                            If `'zero'`, any instances in the utterance
-                            without a `syllables` attribute are treated
-                            as having zero syllables for the speech
-                            rate calculation.
+            If 'squeeze`, the same behavior as 'zero', plus any items
+            at the beginning or end of the utterance with no `syllables`
+            attribute are ignored while summing the total utterance
+            duration.
 
-                            If `'squeeze`', the same behavior as
-                            `'zero'`, plus any instances at the
-                            beginning or end of the utterance with no
-                            `syllables` attribute are ignored while
-                            summing the total utterance duration.
+            If 'raise', a ValueError is raised if the utterance includes
+            any items without a `syllables` attribute.
 
-                            If `'raise'`, a ValueError is raised if the
-                            utterance includes any instances without a
-                            `syllables` attribute.
+        Returns
+        -------
+        rate : float
+            The number of syllabic segments per second over the items in
+            this utterance.
+
         """
 
         if no_syllables not in {'zero', 'squeeze', 'raise'}:
@@ -196,9 +237,8 @@ class Utterance(object):
             return float(syllable_count) / float(self.dur)
 
     def strip(self):
-        """Strips all non-Word instances, or Word instances where the
-        duration is not positive, from the left and right edges of the
-        list of entries in this Utterance instance.
+        """Strip items that are not Words, or Words where the duration
+        is not positive, from the left and right edges of the utterance.
         """
 
         try:
@@ -223,12 +263,11 @@ class Utterance(object):
         return self
 
     def update_timestamps(self):
-        """Resets the `beg' and `end' properties of this Utterance instance
-        to the beginning timestamp of the first entry and the ending
-        timestamp of the final entry, respectively. If a timestamp is None, or
-        if there are no entries in the list, `beg' and/or `end' will be set to
-        None instead. This method also resets the `dur' property of the
-        Utterance instance based on the new `beg' and `end' values.
+        """Reset the `beg` and `end` properties of this utterance.
+
+        If there are no items in the utterance, both properties will be
+        set to None.
+
         """
 
         try:
@@ -242,25 +281,31 @@ class Utterance(object):
 
 
 def words_to_utterances(words, sep=0.5):
-    """Generator that takes an iterable of Word and Pause instances, such as
+    """Yield Utterance instances from iterable of Word and Pause instances.
+
+    Generator that takes an iterable of Word and Pause instances, such as
     process_words(), and packs them into Utterance instances.
 
     A new Utterance is created at the start of the iterable passed to
     words_to_utterances(), and then whenever there is a sequence of Pause
     instances that add up to `sep` seconds or more of duration.
 
-    Arguments:
-        words:      iterable of Word and Pause instances
-        sep:        if more than `sep` seconds of Pause instances occur
-                    consecutively, yield the current Utterance instance
-                    and begin a new one. Defaults to 0.5.
+    Parameters
+    ----------
+    words : iterable object of Word and Pause instances
+    sep : float, optional
+        If more than `sep` seconds of Pause instances occur consecutively,
+        yield the current Utterance instance and initialize a new one with
+        no items. Default is 0.5.
 
-    Yields:
-        Utterance instances for each sequence of word entries delimited by
-        >= `sep` seconds (default 0.5) of Pause instances. Pause instances, or
-        Word instances with invalid timestamps, are stripped from the
-        beginning and end of the words list belonging to each yielded
-        Utterance.
+    Yields
+    ------
+    utt : Utterance
+        An Utterance for each sequence of word entries delimited by
+        >= `sep` seconds (default 0.5) of Pause instances. Pause instances,
+        or Word instances with invalid timestamps, are removed from the
+        beginning and ends of the list of items in each Utterance.
+
     """
 
     utt = Utterance()

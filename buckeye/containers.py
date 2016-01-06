@@ -1,3 +1,14 @@
+"""Classes to store and manipulate entries in the Buckeye Corpus.
+
+References
+----------
+Pitt, M.A., Dilley, L., Johnson, K., Kiesling, S., Raymond, W., Hume, E.
+ and Fosler-Lussier, E. (2007) Buckeye Corpus of Conversational Speech
+ (2nd release) [www.buckeyecorpus.osu.edu] Columbus, OH: Department of
+ Psychology, Ohio State University (Distributor).
+
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -8,36 +19,44 @@ SYLLABIC = {'aa', 'ae', 'ay', 'aw', 'ao', 'oy', 'ow', 'eh', 'ey', 'ah', 'uw',
             'uhn', 'ihn', 'iyn'}
 
 class Word(object):
-    """Container for data about one word (or similar entry) in a speech
-    corpus.
+    """A word entry in the Buckeye Corpus.
 
-    Arguments:
-        orthography:    orthography of the word, or another label for
-                        this entry
-        beg:            timestamp where this word begins. Coerced to float, or
-                        None if coercion fails.
-        end:            timestamp where this word ends. Coerced to float, or
-                        None if coercion fails.
-        phonemic:       ordered iterable with the segments in the word's
-                        dictionary or citation form. Defaults to None.
-        phonetic:       ordered iterable with the segments in a close
-                        phonetic transcription of the word. Defaults to
-                        None.
-        pos:            part of speech of the word. Defaults to None.
+    Parameters
+    ----------
+    orthography : str
+        Written form of the word, or another label for this entry.
 
-    Properties:
-        All arguments are stored as read-only properties, in addition to
-        the following.
+    beg : float
+        Timestamp where the word begins.
 
-        dur:            time from the beginning to the end of this word,
-                        or None if the duration cannot be calculated
-        phones:         defaults to None, but may be set to an ordered
-                        iterable containing Phone instances that match
-                        the segments in this word's phonetic property
-        misaligned:     True if `dur' is negative, or if the `seg'
-                        properties of the Phone instances in `phones'
-                        do not match the word's `phonetic' property.
-                        Otherwise False.
+    end : float
+        Timestamp where the word ends.
+
+    phonemic : list of str, optional
+        Transcription of the word's dictionary or citation form. Default
+        is None.
+
+    phonetic : list of str, optional
+        Close phonetic transcription of the word. Default is None.
+
+    pos : str, optional
+        Part of speech. Default is None.
+
+    Attributes
+    ----------
+    orthography
+    beg
+    end
+    phonemic
+    phonetic
+    pos
+    dur
+    phones : list of Phone
+        List of Phone instances with timestamps for the close phonetic
+        transcription of the word.
+
+    misaligned
+
     """
 
     def __init__(self, orthography, beg, end,
@@ -72,22 +91,32 @@ class Word(object):
 
     @property
     def orthography(self):
+        """Written form of the word, or another label for this entry."""
         return self.__orthography
 
     @property
     def phonemic(self):
+        """Transcription of the word's dictionary or citation form."""
         return self.__phonemic
 
     @property
     def phonetic(self):
+        """Close phonetic transcription of the word."""
         return self.__phonetic
 
     @property
     def pos(self):
+        """Part of speech."""
         return self.__pos
 
     @property
     def misaligned(self):
+        """A flag for whether there is an obvious issue with the
+        time-alignment of this word. True if `dur` can be calculated but
+        is negative, or if the Phones that correspond to this word's
+        timestamps don't match up with the given close phonetic
+        transcription in `phonetic`. Otherwise False."""
+
         if self.dur is not None and self.dur < 0:
             return True
 
@@ -108,14 +137,17 @@ class Word(object):
 
     @property
     def beg(self):
+        """Timestamp where the word begins."""
         return self.__beg
 
     @property
     def end(self):
+        """Timestamp where the word ends."""
         return self.__end
 
     @property
     def dur(self):
+        """Duration of the word, or None if it cannot be calculated."""
         try:
             return self.__end - self.__beg
 
@@ -123,18 +155,24 @@ class Word(object):
             return None
 
     def syllables(self, phonetic=False):
-        """Returns the number of syllabic segments in the Word.
+        """Return the number of syllabic segments in the word.
 
-        Arguments:
-            phonetic:   if True, returns the number of syllabic
-                        segments in the phones attribute (if defined,
-                        else uses the phonetic attribute). Defaults to
-                        False, which uses the number of syllabic
-                        segments in the phonemic attribute instead.
+        Syllabic segments are listed in `buckeye.containers.SYLLABIC`.
 
-        Returns:
-            Integer number of syllabic segments in the specified
-            transcription attribute.
+        Parameters
+        ----------
+        phonetic : bool, optional
+            If True, the number of syllabic segments in the `phones`
+            attribute is returned. (If `phones` is None, the `phonetic`
+            attribute is used.) If False, the number of syllabic
+            segments in the `phonemic` attribute is returned instead.
+            Default is False.
+
+        Returns
+        -------
+        syllables : int
+            The number of syllabic segments in the specified attribute.
+
         """
 
         if phonetic:
@@ -155,25 +193,35 @@ class Word(object):
 
 
 class Pause(object):
-    """Container for data about one pause (such as a silence, breath, laugh,
-    or speech error) in a speech corpus.
+    """A non-speech entry in the Buckeye Corpus.
 
-    Arguments:
-        entry:          label for this entry. Defaults to None.
-        beg:            timestamp where this entry begins. Coerced to float,
-                        or None if coercion fails. Defaults to None.
-        end:            timestamp where this entry ends. Coerced to float, or
-                        None if coercion fails. Defaults to None.
+    Some kinds of non-speech entries are: silences, breaths, laughs,
+    speech errors, the beginning or end of a track, or others. These are
+    all indicated with `{}` or `<>` braces in the transcription file.
 
-    Properties:
-        All arguments are stored as read-only properties, in addition to
-        the following.
+    Parameters
+    ----------
+    entry : str, optional
+        A written label for this entry, such as `<SIL>` for a silence.
+        Default is None.
 
-        dur:            time from the beginning to the end of this pause,
-                        or None if the duration cannot be calculated
-        phones:         defaults to None, but may be set to an ordered
-                        iterable containing Phone instances
-        misaligned:     True if `dur' is negative, otherwise False.
+    beg : float, optional
+        Timestamp where the entry begins. Default is None.
+
+    end : float, optional
+        Timestamp where the entry ends. Default is None
+
+    Attributes
+    ----------
+    entry
+    beg
+    end
+    phones : list of Phone
+        List of Phone instances with timestamps for the close phonetic
+        transcription of the word.
+    dur
+    misaligned
+
     """
 
     def __init__(self, entry=None, beg=None, end=None):
@@ -199,25 +247,32 @@ class Pause(object):
 
     @property
     def entry(self):
+        """Written label for this entry."""
         return self.__entry
 
     @property
     def misaligned(self):
-        if self.dur < 0:
+        """A flag for whether there is an obvious issue with the
+        time-alignment of this entry. True if `dur` can be calculated but
+        is negative. Otherwise False."""
+        if self.dur is not None and self.dur < 0:
             return True
 
         return False
 
     @property
     def beg(self):
+        """Timestamp where the entry begins."""
         return self.__beg
 
     @property
     def end(self):
+        """Timestamp where the entry ends."""
         return self.__end
 
     @property
     def dur(self):
+        """Duration of the entry, or None if it cannot be calculated."""
         try:
             return self.__end - self.__beg
 
@@ -226,16 +281,25 @@ class Pause(object):
 
 
 class LogEntry(object):
-    """Container for data about one log entry (such as transcriber
-    confidence or a phonation annotation) in a speech corpus.
+    """A log entry in the Buckeye Corpus, such as transcriber confidence.
 
-    Arguments:
-        entry:          label for this entry
-        beg:            timestamp where this entry begins. Defaults to None.
-        end:            timestamp where this entry ends. Defaults to None.
+    Parameters
+    ----------
+    entry : str
+        A written label for this entry, such as `<VOICE=creaky>`.
 
-    Properties:
-        All arguments are stored as read-only properties.
+    beg : float, optional
+        Timestamp where the entry begins. Default is None.
+
+    end : float, optional
+        Timestamp where the entry ends. Default is None.
+
+    Attributes
+    ----------
+    entry
+    beg
+    end
+
     """
 
     def __init__(self, entry, beg=None, end=None):
@@ -260,18 +324,22 @@ class LogEntry(object):
 
     @property
     def entry(self):
+        """Written label for this entry."""
         return self.__entry
 
     @property
     def beg(self):
+        """Timestamp where the entry begins."""
         return self.__beg
 
     @property
     def end(self):
+        """Timestamp where the entry ends."""
         return self.__end
 
     @property
     def dur(self):
+        """Duration of the entry, or None if it cannot be calculated."""
         try:
             return self.__end - self.__beg
 
@@ -280,22 +348,25 @@ class LogEntry(object):
 
 
 class Phone(object):
-    """Container for data about one segment in a speech corpus.
+    """A phone entry in the Buckeye Corpus.
 
-    Arguments:
-        seg:            transcription label for this segment
-        beg:            timestamp where this segment begins. Coerced to float,
-                        or None if coercion fails. Defaults to None.
-        end:            timestamp where this segment ends. Coerced to float,
-                        or None if coercion fails. Defaults to None.
+    Parameters
+    ----------
+    seg : str
+        Label for the phone (pseudo-ARPABET in the Buckeye Corpus).
 
-    Propreties:
-        All arguments are stored as read-only properties, in addition to
-        the following.
+    beg : float, optional
+        Timestamp where the phone begins. Default is None.
 
-        dur:            difference between the beg and end timestamps
-                        for this segment, or None if the duration cannot
-                        be calculated
+    end : float, optional
+        Timestamp where the phone ends. Default is None.
+
+    Attributes
+    ----------
+    beg
+    end
+    dur
+
     """
 
     def __init__(self, seg, beg=None, end=None):
@@ -319,18 +390,22 @@ class Phone(object):
 
     @property
     def seg(self):
+        """Label for this phone (e.g., using ARPABET transcription)."""
         return self.__seg
 
     @property
     def beg(self):
+        """Timestamp where the phone begins."""
         return self.__beg
 
     @property
     def end(self):
+        """Timestamp where the phone ends."""
         return self.__end
 
     @property
     def dur(self):
+        """Duration of the phone, or None if it cannot be calculated."""
         try:
             return self.__end - self.__beg
 

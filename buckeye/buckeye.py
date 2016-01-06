@@ -1,3 +1,14 @@
+"""Classes and functions to read and loop through the Buckeye Corpus.
+
+References
+----------
+Pitt, M.A., Dilley, L., Johnson, K., Kiesling, S., Raymond, W., Hume, E.
+ and Fosler-Lussier, E. (2007) Buckeye Corpus of Conversational Speech
+ (2nd release) [www.buckeyecorpus.osu.edu] Columbus, OH: Department of
+ Psychology, Ohio State University (Distributor).
+
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -42,37 +53,49 @@ TRACK_RE = re.compile('s[0-4][0-9]/s[0-4][0-9]0[0-6][ab].zip')
 
 
 class Speaker(object):
-    """Iterable of Track instances for the subfiles of one speaker
-    (s0101a.zip, s0101b.zip, ...). Also includes metadata for that
-    speaker.
+    """Iterable of Track instances for one Buckeye speaker, with metadata.
 
-    Arguments:
-        zpath:      path to a zipped speaker archive (s01.zip, ...)
-        load_wavs:  if True, the wav files in the archive are read into
-                    Track instances, in addition to the text annotations.
-                    Default is False.
+    Parameters
+    ----------
+    path : str
+        Path to a zipped speaker archive (e.g., 's01.zip').
 
-    Attributes:
-        name:       the speaker's code in the Buckeye Corpus ('s01', ...)
-        path:       path to the zipped speaker archive
-        sex:        'f' or 'm' for the sex of the speaker
-        age:        'o' or 'y' for the age of the speaker (old or young)
-        interviewer:'f' or 'm' for the sex of the speaker's interviewer
-        tracks:     list of Track instances containing corpus data
-                    (as read from s0101a.zip, s0101b.zip, ...)
+    load_wavs : bool, optional
+        If True, the .wav files in the archive are read into the Track
+        instances, in addition to the text annotations. Default is False.
+
+    Attributes
+    ----------
+    name : str
+        Code-name for the speaker in the Buckeye Corpus (e.g., 's01').
+
+    path : str
+        Path to the zipped speaker archive.
+
+    sex : str
+        Sex of the speaker ('f' for female or 'm' for male)
+
+    age : str
+        Age of the speaker ('o' for older than 40, 'y' for younger)
+
+    interviewer : str
+        Sex of the person who interviewed the speaker ('f' or 'm')
+
+    tracks : list of Track
+        Track instances containing the corpus data, as read from
+        e.g. s0101a.zip, s0101b.zip, etc.
+
     """
 
-    def __init__(self, zpath, load_wavs=False):
-        self.name = splitext(basename(zpath))[0]
-        self.path = zpath
+    def __init__(self, path, load_wavs=False):
+        self.name = splitext(basename(path))[0]
+        self.path = path
 
-        self.sex = SPEAKERS[self.name][0]
-        self.age = SPEAKERS[self.name][1]
-        self.interviewer = SPEAKERS[self.name][2]
+        self.sex, self.age, self.interviewer = SPEAKERS[self.name]
 
         self.tracks = []
 
-        zfile = zipfile.ZipFile(zpath)
+        zfile = zipfile.ZipFile(path)
 
         for subzip in sorted(zfile.namelist()):
             if re.match(TRACK_RE, subzip):
@@ -96,32 +119,49 @@ class Speaker(object):
 
 
 class Track(object):
-    """Container holding the processed annotation data, and optionally
-    the wav file, for one subfile (s0101a.zip, ...).
+    """Corpus data from one track archive file (e.g., s0101a.zip).
 
-    Arguments:
-        path:       relative path to a track inside a zipped speaker archive
-                    ('s0101a.zip', ...)
-        contents:   ZipFile instance for the zipped track archive
-                    (s0101a.zip, ...)
-        load_wav:   if True, the wav file will be read into the Track
-                    instance in addition to the text annotation data.
-                    Default is False.
+    Parameters
+    ----------
+    path : str
+        Path to a zipped track archive (e.g., 's01/s0101a.zip').
 
-    Attributes:
-        name:       name of the track file ('s0101a', ...)
-        path:       relative path to the track in the zipped speaker archive
-        words:      list of Word instances, as processed from a .words file.
-                    Generated using process_words().
-        phones:     list of Phone instances, as processed from a .phones file.
-                    Generated using process_phones().
-        log:        list of LogEntry instances, as processed from a .log file.
-                    Generated using process_logs().
-        txt:        list of unaligned turn transcriptions, from a .txt file.
-        wav:        if load_wav=True, an open Wave_read instance from the
-                    Python wave library for the track .wav file
-        log_ends:   list of the end timestamps for each LogEntry, to be used
-                    internally by get_logs() method
+    contents : file-like
+        Open file-like object of track data.
+
+    load_wav : bool, optional
+        If True, the .wav file will be read into the Track instance, in
+        addition to the text annotations. Default is False.
+
+    Attributes
+    ----------
+    name : str
+        Name of the track file (e.g., 's0101a')
+
+    path : str
+        Path to the zipped track archive.
+
+    words : list of Word and Pause
+        Chronological list of Word and Pause instances that are
+        constructed from the .words file in this track.
+
+    phones : list of Phone
+        Chronological list of Phone instances that are constructed from
+        the .phones file in this track.
+
+    log : list of LogEntry
+        Chronological list of LogEntry instances that are constructed from
+        the .log file in this track.
+
+    txt : list of str
+        Chronological list of transcriptions of each turn from the .txt
+        file in this track (not time-aligned).
+
+    wav : wave.Wave_read
+        An open wave.Wave_read instance for the .wav file in this track.
+        If this track was constructed with `load_wav=False`, this
+        attribute is not present.
+
     """
 
     def __init__(self, path, contents, load_wav=False):
@@ -145,7 +185,7 @@ class Track(object):
             self.wav = wave.open(BytesIO(wav))
 
         # add references in self.words to the corresponding self.phones
-        self.get_all_phones()
+        self._set_phones()
 
         # make a list of the log entry endpoints to quickly search later
         self.log_ends = [l.end for l in self.log]
@@ -156,51 +196,21 @@ class Track(object):
     def __str__(self):
         return '<Track {}>'.format(self.name)
 
-    def clip_wav(self, clip, beg, end):
-        """Extracts a clip from the track .wav file.
-        From: https://github.com/serapio/kwaras/blob/master/process/web.py
-
-        Arguments:
-            clip:       path and filename to write the sound clip to
-            beg:        timestamp in the track .wav file where the clip
-                        to be extracted begins
-            end:        timestamp in the track .wav file where the clip
-                        to be extracted ends
-
+    def _set_phones(self):
         """
-        framerate = self.wav.getframerate()
-        length = end - beg
+        Private method used to add references in each Word and Pause
+        instance to the corresponding Phone instances in this track.
 
-        frames = int(round(length * framerate))
-        beg_frame = int(round(beg * framerate))
+        Notes
+        -----
+        A Phone is counted as belonging to a Word or Pause if at least
+        half of the Phone's duration occurs between the `beg` and `end`
+        timestamps of the Word or Pause.
 
-        wav_out = wave.open(clip, 'wb')
-
-        wav_out.setparams(self.wav.getparams())
-        self.wav.setpos(beg_frame)
-        wav_out.writeframes(self.wav.readframes(frames))
-
-        wav_out.close()
-
-    def get_all_phones(self):
-        """Finds the slice of Phone instances in self.phones that belong to
-        of each Word or Pause instance in this track. Adds a list of
-        references in each Word or Pause instance to its matching Phone
-        instances as the word's `phones' attribute.
-
-        Each Word instance will also have a `misaligned' attribute that is
-        False if the list of matching Phone instances corresponds to the
-        word's phonetic transcription in its `phonetic' attribute, or True if
-        it does not (or True if the word has a negative duration).
-
-        The boundaries for the phone entries in the .phones files don't
-        always line up exactly with the word boundaries in the .words files.
-        This method treats a phone as belonging to a Word or Pause instance if
-        at least half of the phone overlaps with the word, and (for Word
-        instances only) if the phone is not a B_TRANS, VOCNOISE, or LAUGH.
         """
 
         phone_mids = [p.beg + 0.5 * p.dur for p in self.phones]
+
         for word in self.words:
             left = bisect_left(phone_mids, word.beg)
             right = bisect_left(phone_mids, word.end)
@@ -224,27 +234,70 @@ class Track(object):
 
             word.phones = phones
 
+    def clip_wav(self, clip, beg, end):
+        """Write a new .wav file containing a clip from this track.
+
+        Parameters
+        ----------
+        clip : str
+            Path to the new .wav file.
+
+        beg : float
+            Time in the track .wav file where the clip should begin.
+
+        end : float
+            Time in the track .wav file where the clip should end.
+
+        Returns
+        -------
+        None
+
+        """
+
+        framerate = self.wav.getframerate()
+        length = end - beg
+
+        frames = int(round(length * framerate))
+        beg_frame = int(round(beg * framerate))
+
+        wav_out = wave.open(clip, 'wb')
+
+        wav_out.setparams(self.wav.getparams())
+        self.wav.setpos(beg_frame)
+        wav_out.writeframes(self.wav.readframes(frames))
+
+        wav_out.close()
+
     def get_logs(self, beg, end):
-        """Returns all log entries within the times given, including
-        entries that partially overlap with the given times.
+        """Return log entries within, or overlapping with, the given times.
 
-        Arguments:
-            beg:        log entries that begin after (exclusive) or
-                        overlap with this time will be returned
-            end:        log entries that begin at or after this time
-                        will not be returned
+        Parameters
+        ----------
+        beg : float
+            Log entries that begin after or overlap with this time will
+            be included in the returned list.
 
-        Returns:
-            List of references to LogEntry instances in this track that
-            are within the times given.
+        end : float
+            Log entries that end before or overlap with this time will be
+            included in the returned list.
+
+        Returns
+        -------
+        logs : list of LogEntry
+            List of references to the LogEntry instances in this track
+            that are within the given times.
+
         """
 
         # returns all log intervals that overlap with the times given
         logs = []
+
         log_idx = bisect_left(self.log_ends, beg)
+
         try:
             if self.log[log_idx].end == beg:
                 log_idx += 1
+
         except IndexError:
             # the log tier ends before the beg time
             return logs
@@ -257,15 +310,24 @@ class Track(object):
 
 
 def corpus(path, load_wavs=False):
-    """Generator that takes a path to a folder containing compressed Buckeye
-    Corpus speaker archives and yields Speaker instances.
+    """Yield Speaker instances from a folder of zipped speaker archives.
 
-    Arguments:
-        path:           path to a directory containing all of the zipped
-                        speaker archives (s01.zip, s02.zip, s03.zip, ...)
-        load_wavs:      if True, wav files are read into the Track instances
-                        that are referenced in the yielded Speaker instances.
-                        Default is False.
+    Parameters
+    ----------
+    path : str
+        Path to a directory containing all of the zipped speaker archives
+        in the Buckeye Corpus (s01.zip, s02.zip, ..., s40.zip).
+
+    load_wavs : bool, optional
+        If True, the .wav files are read into the Track instances in the
+        yielded Speaker instances. Default is False.
+
+    Yields
+    ------
+    Speaker
+        One Speaker instance for each zipped speaker archive in the
+        folder given by `path`.
+
     """
 
     paths = sorted(glob.glob(join(path, 's[0-4][0-9].zip')))
@@ -274,15 +336,20 @@ def corpus(path, load_wavs=False):
         yield Speaker(path, load_wavs)
 
 def process_logs(logs):
-    """Generator that takes a Buckeye .log corpus file and yields LogEntry
-    instances in the order that they appear.
+    """Yield LogEntry instances from a .log file in the Buckeye Corpus.
 
-    Arguments:
-        logs:       open file(-like) instance created from a .log file in
-                    the Buckeye Corpus
+    Parameters
+    ----------
+    logs : file-like
+        Open file-like object created from a .log file in the Buckeye
+        Corpus.
 
-    Yields:
-        LogEntry instances for each sequential entry in the .log file
+    Yields
+    ------
+    LogEntry
+        One LogEntry instance for each entry in the .log file, in
+        chronological order.
+
     """
 
     # skip the header
@@ -318,15 +385,20 @@ def process_logs(logs):
         line = logs.readline()
 
 def process_phones(phones):
-    """Generator that takes a Buckeye .phones corpus file and yields Phone
-    instances in the order that they appear.
+    """Yield Phone instances from a .phones file in the Buckeye Corpus.
 
-    Arguments:
-        phones:     open file(-like) instance created from a .phones file
-                    in the Buckeye Corpus
+    Parameters
+    ----------
+    phones : file-like
+        Open file-like object created from a .phones file in the Buckeye
+        Corpus.
 
-    Yields:
-        Phone instances for each sequential entry in the .phones file
+    Yields
+    ------
+    Phone
+        One Phone instance for each entry in the .phones file, in
+        chronological order.
+
     """
 
     # skip the header
@@ -369,18 +441,22 @@ def process_phones(phones):
         line = phones.readline()
 
 def process_words(words):
-    """Generator that takes a Buckeye .words corpus file and yields Word and
-    Pause instances in the order that they appear.
+    """Yield Word and Pause instances from a .words file.
 
-    Non-word entries (such as `<B_TRANS>` entries) are yielded as Pause
-    instances.
+    Parameters
+    ----------
+    words : file-like
+        Open file-like object created from a .words file in the Buckeye
+        Corpus.
 
-    Arguments:
-        words:      open file(-like) instance created from a .words file
-                    in the Buckeye Corpus
+    Yields
+    ------
+    Word, Pause
+        One Word or Pause instance for each entry in the .words file, in
+        chronological order. Entries that begin with '{' or '<' are
+        yielded as Pause instances. All other entries are yielded as Word
+        instances.
 
-    Yields:
-        Word and Pause instances for each sequential entry in the .words file
     """
 
     # skip the header

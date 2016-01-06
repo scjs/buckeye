@@ -192,81 +192,81 @@ class TestTrack(object):
         wav_file = BytesIO()
         self.track_no_wav.clip_wav(wav_file, 0.0625, 0.075)
 
-    def test_get_all_phones(self):
+    def test_set_phones(self):
         assert_equal(self.track.words[1].phones[0].seg, 'k')
         assert_equal(self.track.words[1].phones[1].seg, 'ae')
         assert_equal(self.track.words[1].phones[2].seg, 't')
         assert_equal(len(self.track.words[1].phones), 3)
 
-    def test_get_all_phones_left_edge_misaligned(self):
+    def test_set_phones_left_edge_misaligned(self):
         self.track.phones[2]._Phone__beg = 0.18
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-        yield self.test_get_all_phones
+        yield self.test_set_phones
 
         self.track.phones[2]._Phone__beg = 0.15
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-    def test_get_all_phones_left_edge_too_long(self):
+    def test_set_phones_left_edge_too_long(self):
         self.track.phones[2]._Phone__beg = 0.01
-        self.track.get_all_phones()
+        self.track._set_phones()
 
         assert_equal(self.track.words[1].phones[0].seg, 'ae')
         assert_equal(len(self.track.words[1].phones), 2)
 
         self.track.phones[2]._Phone__beg = 0.15
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-    def test_get_all_phones_right_edge_misaligned(self):
+    def test_set_phones_right_edge_misaligned(self):
         self.track.phones[4]._Phone__end = 0.43
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-        yield self.test_get_all_phones
+        yield self.test_set_phones
 
         self.track.phones[4]._Phone__end = 0.44
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-    def test_get_all_phones_right_edge_too_long(self):
+    def test_set_phones_right_edge_too_long(self):
         self.track.phones[4]._Phone__end = 0.52
-        self.track.get_all_phones()
+        self.track._set_phones()
 
         assert_equal(self.track.words[1].phones[1].seg, 'ae')
         assert_equal(len(self.track.words[1].phones), 2)
 
         self.track.phones[4]._Phone__end = 0.44
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-    def test_get_all_phones_exclude_left_btrans(self):
+    def test_set_phones_exclude_left_btrans(self):
         self.track.phones[2]._Phone__seg = '{B_TRANS}'
         self.track.words[1]._Word__phonetic = ['ae', 't']
-        self.track.get_all_phones()
+        self.track._set_phones()
 
         assert_equal(self.track.words[1].phones[0].seg, 'ae')
         assert_equal(len(self.track.words[1].phones), 2)
 
         self.track.phones[2]._Phone__seg = 'k'
         self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-    def test_get_all_phones_exclude_right_etrans(self):
+    def test_set_phones_exclude_right_etrans(self):
         self.track.phones[4]._Phone__seg = '{E_TRANS}'
         self.track.words[1]._Word__phonetic = ['k', 'ae']
-        self.track.get_all_phones()
+        self.track._set_phones()
 
         assert_equal(self.track.words[1].phones[0].seg, 'k')
         assert_equal(len(self.track.words[1].phones), 2)
 
         self.track.phones[4]._Phone__seg = 't'
         self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
-        self.track.get_all_phones()
+        self.track._set_phones()
         
-    def test_get_all_phones_right_etrans_phonetic_is_none(self):
-        # if the entry has no phonetic transcription, get_all_phones() should
+    def test_set_phones_right_etrans_phonetic_is_none(self):
+        # if the entry has no phonetic transcription, _set_phones() should
         # always include refs to special phone types (SIL etc)
 
         self.track.phones[4]._Phone__seg = '{E_TRANS}'
         self.track.words[1]._Word__phonetic = None
-        self.track.get_all_phones()
+        self.track._set_phones()
 
         assert_equal(self.track.words[1].phones[0].seg, 'k')
         assert_equal(self.track.words[1].phones[1].seg, 'ae')
@@ -275,36 +275,36 @@ class TestTrack(object):
 
         self.track.phones[4]._Phone__seg = 't'
         self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-    def test_get_all_phones_backwards_word(self):
+    def test_set_phones_backwards_word(self):
         self.track.words[1]._Word__beg = 0.44
         self.track.words[1]._Word__end = 0.15
-        self.track.get_all_phones()
+        self.track._set_phones()
 
         assert_equal(self.track.words[1].phones, [])
 
         self.track.words[1]._Word__beg = 0.15
         self.track.words[1]._Word__end = 0.44
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-    def test_get_all_phones_zero_word(self):
+    def test_set_phones_zero_word(self):
         self.track.words[1]._Word__end = 0.15
-        self.track.get_all_phones()
+        self.track._set_phones()
 
         assert_equal(self.track.words[1].phones, [])
 
         self.track.words[1]._Word__end = 0.44
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-    def test_get_all_phones_phonetic_is_none(self):
+    def test_set_phones_phonetic_is_none(self):
         self.track.words[1]._Word__phonetic = None
-        self.track.get_all_phones()
+        self.track._set_phones()
 
-        yield self.test_get_all_phones
+        yield self.test_set_phones
 
         self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
-        self.track.get_all_phones()
+        self.track._set_phones()
 
     def test_get_logs_too_early(self):
         logs = self.track.get_logs(-1.0, 0.0)
