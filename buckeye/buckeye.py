@@ -15,10 +15,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from bisect import bisect_left
-from io import BytesIO, StringIO
 from os.path import basename, splitext, join
 
 import glob
+import io
 import re
 import wave
 import zipfile
@@ -56,22 +56,21 @@ TRACK_RE = re.compile('s[0-4][0-9]/s[0-4][0-9]0[0-6][ab].zip')
 class Speaker(object):
     """Iterable of Track instances for one Buckeye speaker, with metadata.
 
+    Use Speaker.from_zip(path) to initialize a Speaker from a single zip file.
+
     Parameters
     ----------
-    path : str
-        Path to a zipped speaker archive (e.g., 's01.zip').
+    name : str
+        Code-name for the speaker in the Buckeye Corpus (e.g., 's01').
 
-    load_wavs : bool, optional
-        If True, the .wav files in the archive are read into the Track
-        instances, in addition to the text annotations. Default is False.
+    tracks : list of Track
+        Track instances containing the annotations and recordings for this
+        speaker, as read from e.g. s0101a.zip, s0101b.zip, etc.
 
     Attributes
     ----------
     name : str
         Code-name for the speaker in the Buckeye Corpus (e.g., 's01').
-
-    path : str
-        Path to the zipped speaker archive.
 
     sex : str
         Sex of the speaker ('f' for female or 'm' for male)
@@ -83,28 +82,49 @@ class Speaker(object):
         Sex of the person who interviewed the speaker ('f' or 'm')
 
     tracks : list of Track
-        Track instances containing the corpus data, as read from
-        e.g. s0101a.zip, s0101b.zip, etc.
+        Track instances containing the annotations and recordings for this
+        speaker, as read from e.g. s0101a.zip, s0101b.zip, etc.
 
     """
 
-    def __init__(self, path, load_wavs=False):
-        self.name = splitext(basename(path))[0]
-        self.path = path
-
+    def __init__(self, name, tracks):
+        self.name = name
         self.sex, self.age, self.interviewer = SPEAKERS[self.name]
+        self.tracks = tracks
 
-        self.tracks = []
+    @classmethod
+    def from_zip(cls, path, load_wavs=False):
+        """Return a Speaker instance from a zip file.
 
-        zfile = zipfile.ZipFile(path)
+        Parameters
+        ----------
+        path : str
+            Path to a zipped speaker archive (e.g., 's01.zip').
 
-        for subzip in sorted(zfile.namelist()):
-            if re.match(TRACK_RE, subzip):
-                track_contents = zipfile.ZipFile(BytesIO(zfile.read(subzip)))
-                track = Track(subzip, track_contents, load_wavs)
-                self.tracks.append(track)
+        load_wavs : bool, optional
+            If True, the .wav files in the archive are read into the Track
+            instances, in addition to the text annotations. Default is False.
 
-        zfile.close()
+        Returns
+        -------
+        Speaker
+
+        """
+
+        name = splitext(basename(path))[0]
+
+        tracks = []
+
+        speaker = zipfile.ZipFile(path)
+
+        for path in sorted(speaker.namelist()):
+            if re.match(TRACK_RE, path):
+                data = zipfile.ZipFile(io.BytesIO(speaker.read(path)))
+                tracks.append(Track.from_zip(path, data, load_wavs))
+
+        speaker.close()
+
+        return cls(name, tracks)
 
     def __iter__(self):
         return iter(self.tracks)
@@ -113,7 +133,7 @@ class Speaker(object):
         return self.tracks[i]
 
     def __repr__(self):
-        return 'Speaker("{}")'.format(self.path)
+        return 'Speaker("{}")'.format(self.name)
 
     def __str__(self):
         return '<Speaker {} ({}, {})>'.format(self.name, self.sex, self.age)
@@ -122,25 +142,37 @@ class Speaker(object):
 class Track(object):
     """Corpus data from one track archive file (e.g., s0101a.zip).
 
+    Use Track.from_zip(path) to initialize a Track from a single zip file.
+
     Parameters
     ----------
-    path : str
-        Path to a zipped track archive (e.g., 's01/s0101a.zip').
+    name : str
+        Name of the track file (e.g., 's0101a')
 
-    contents : file-like
-        Open file-like object of track data.
+    words : str or file
+        Path to the .words file associated with this track (e.g.,
+        's0101a.words'), or an open file(-like) object.
 
-    load_wav : bool, optional
-        If True, the .wav file will be read into the Track instance, in
-        addition to the text annotations. Default is False.
+    phones : str or file
+        Path to the .phones file associated with this track (e.g.,
+        's0101a.phones'), or an open file(-like) object.
+
+    log : str or file
+        Path to the .log file associated with this track (e.g.,
+        's0101a.log'), or an open file(-like) object.
+
+    txt : str or file
+        Path to the .txt file associated with this track (e.g.,
+        's0101a.txt'), or an open file(-like) object.
+
+    wav : str or file, optional
+        Path to the .wav file associated with this track (e.g.,
+        's0101a.wav'), or an open file(-like) object.
 
     Attributes
     ----------
     name : str
         Name of the track file (e.g., 's0101a')
-
-    path : str
-        Path to the zipped track archive.
 
     words : list of Word and Pause
         Chronological list of Word and Pause instances that are
@@ -165,37 +197,91 @@ class Track(object):
 
     """
 
-    def __init__(self, path, contents, load_wav=False):
-        self.name = splitext(basename(path))[0]
-        self.path = path
+    def __init__(self, name, words, phones, log, txt, wav=None):
+        self.name = name
 
         # read and store text info
-        words = contents.read(self.name + '.words').decode('cp1252')
-        phones = contents.read(self.name + '.phones').decode('cp1252')
-        log = contents.read(self.name + '.log').decode('cp1252')
-        txt = contents.read(self.name + '.txt').decode('cp1252')
+        if not hasattr(words, 'readline'):
+            words = io.open(words, encoding='latin-1')
 
-        self.words = list(process_words(StringIO(words)))
-        self.phones = list(process_phones(StringIO(phones)))
-        self.log = list(process_logs(StringIO(log)))
-        self.txt = txt.splitlines()
+        self.words = list(process_words(words))
+        words.close()
+
+        if not hasattr(phones, 'readline'):
+            phones = io.open(phones, encoding='latin-1')
+
+        self.phones = list(process_phones(phones))
+        phones.close()
+
+        if not hasattr(log, 'readline'):
+            log = io.open(log, encoding='latin-1')
+
+        self.log = list(process_logs(log))
+        log.close()
+
+        if not hasattr(txt, 'readline'):
+            txt = io.open(txt, encoding='latin-1')
+
+        self.txt = txt.read().splitlines()
+        txt.close()
 
         # optionally store the sound file
-        if load_wav:
-            wav = contents.read(self.name + '.wav')
-            self.wav = wave.open(BytesIO(wav))
+        if wav is not None:
+            self.wav = wave.open(wav)
 
         # add references in self.words to the corresponding self.phones
         self._set_phones()
 
         # make a list of the log entry endpoints to quickly search later
-        self.log_ends = [l.end for l in self.log]
+        self._log_ends = [l.end for l in self.log]
 
     def __repr__(self):
-        return 'Track("{}")'.format(self.path)
+        return 'Track("{}")'.format(self.name)
 
     def __str__(self):
         return '<Track {}>'.format(self.name)
+
+    @classmethod
+    def from_zip(cls, path, data=None, load_wav=False):
+        """Return a Track instance from a zip file.
+
+        Parameters
+        ----------
+        path : str
+            Path to a zipped track archive (e.g., 's01/s0101a.zip').
+
+        data : zipfile.ZipFile, optional
+            ZipFile instance containing track data, required if `path`
+            points to a zipped archive nested inside another archive. Default
+            is None.
+
+        load_wav : bool, optional
+            If True, the .wav file will be read into the Track instance, in
+            addition to the text annotations. Default is False.
+
+        Returns
+        -------
+        Track
+
+        """
+
+        if data is None:
+            data = zipfile.ZipFile(path)
+
+        name = splitext(basename(path))[0]
+
+        words = io.StringIO(data.read(name + '.words').decode('latin-1'))
+        phones = io.StringIO(data.read(name + '.phones').decode('latin-1'))
+        log = io.StringIO(data.read(name + '.log').decode('latin-1'))
+        txt = io.StringIO(data.read(name + '.txt').decode('latin-1'))
+
+        if load_wav:
+            wav = io.BytesIO(data.read(name + '.wav'))
+
+        else:
+            wav = None
+
+        return cls(name, words, phones, log, txt, wav)
 
     def _set_phones(self):
         """
@@ -293,7 +379,7 @@ class Track(object):
         # returns all log intervals that overlap with the times given
         logs = []
 
-        log_idx = bisect_left(self.log_ends, beg)
+        log_idx = bisect_left(self._log_ends, beg)
 
         try:
             if self.log[log_idx].end == beg:
@@ -308,7 +394,6 @@ class Track(object):
             log_idx += 1
 
         return logs
-
 
 def corpus(path, load_wavs=False):
     """Yield Speaker instances from a folder of zipped speaker archives.
@@ -334,7 +419,7 @@ def corpus(path, load_wavs=False):
     paths = sorted(glob.glob(join(path, 's[0-4][0-9].zip')))
 
     for path in paths:
-        yield Speaker(path, load_wavs)
+        yield Speaker.from_zip(path, load_wavs)
 
 def process_logs(logs):
     """Yield LogEntry instances from a .log file in the Buckeye Corpus.

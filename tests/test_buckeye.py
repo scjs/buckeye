@@ -10,9 +10,10 @@ except ImportError:
 
 from nose.tools import *
 
+import io
 import os
 import struct
-from io import BytesIO, StringIO
+import zipfile
 
 from buckeye import corpus, process_logs, process_phones, process_words
 
@@ -60,7 +61,7 @@ WORDS = """header
 TXT = """the cat is on the mat
 """
 
-WAV = open(os.path.join('tests', 'noise.wav'), 'rb').read()
+WAV = io.open(os.path.join('tests', 'files', 'noise.wav'), 'rb').read()
 
 
 class TestSpeaker(object):
@@ -76,14 +77,13 @@ class TestSpeaker(object):
         ZipFileMock.read.return_value = b''
 
         cls.track = object()
-        TrackMock.return_value = cls.track
+        TrackMock.from_zip.return_value = cls.track
 
-        cls.speaker = Speaker('speakers/s02.zip')
+        cls.speaker = Speaker.from_zip('speakers/s02.zip')
         cls.TrackMock = TrackMock
 
     def test_init(self):
         assert_equal(self.speaker.name, 's02')
-        assert_equal(self.speaker.path, 'speakers/s02.zip')
         assert_equal(self.speaker.sex, 'f')
         assert_equal(self.speaker.age, 'o')
         assert_equal(self.speaker.interviewer, 'm')
@@ -95,9 +95,19 @@ class TestSpeaker(object):
         for i, track in enumerate(self.TrackMock.call_args_list):
             assert_equal(track[0][0], expected_tracks[i])
 
-    @raises(KeyError)
+    @raises(IOError)
     def test_bad_init(self):
-        bad_speaker = Speaker('speakers/s41.zip')
+        bad_speaker = Speaker.from_zip('speakers/s41.zip')
+
+    def test_default_init(self):
+        speaker = Speaker('s03', range(3))
+
+        assert_equal(speaker.name, 's03')
+        assert_equal(speaker.sex, 'm')
+        assert_equal(speaker.age, 'o')
+        assert_equal(speaker.interviewer, 'm')
+
+        assert_equal(speaker.tracks, range(3))
 
     def test_iter(self):
         assert_equal(list(iter(self.speaker)), self.speaker.tracks)
@@ -106,7 +116,7 @@ class TestSpeaker(object):
         assert_equal(self.speaker[0], self.track)
 
     def test_repr(self):
-        assert_equal(repr(self.speaker), 'Speaker("speakers/s02.zip")')
+        assert_equal(repr(self.speaker), 'Speaker("s02")')
 
     def test_str(self):
         assert_equal(str(self.speaker), '<Speaker s02 (f, o)>')
@@ -119,16 +129,16 @@ class TestTrack(object):
 
         def read_mock(filename):
             if filename.endswith('.words'):
-                return WORDS.encode('cp1252')
+                return WORDS.encode('latin-1')
 
             if filename.endswith('.phones'):
-                return PHONES.encode('cp1252')
+                return PHONES.encode('latin-1')
 
             if filename.endswith('.log'):
-                return LOG.encode('cp1252')
+                return LOG.encode('latin-1')
 
             if filename.endswith('.txt'):
-                return TXT.encode('cp1252')
+                return TXT.encode('latin-1')
 
             if filename.endswith('.wav'):
                 return WAV
@@ -136,12 +146,11 @@ class TestTrack(object):
         mock_contents = mock.Mock()
         mock_contents.read = read_mock
 
-        cls.track = Track('s02/s0201a.zip', mock_contents, True)
-        cls.track_no_wav = Track('s02/s0201a.zip', mock_contents)
+        cls.track = Track.from_zip('s02/s0201a.zip', mock_contents, True)
+        cls.track_no_wav = Track.from_zip('s02/s0201a.zip', mock_contents)
 
     def test_init(self):
         assert_equal(self.track.name, 's0201a')
-        assert_equal(self.track.path, 's02/s0201a.zip')
 
         assert_equal(len(self.track.words), 6)
         assert_equal(len(self.track.phones), 14)
@@ -153,14 +162,44 @@ class TestTrack(object):
     def test_init_without_wav(self):
         self.track_no_wav.wav
 
+    def test_default_init(self):
+        words = os.path.join('tests', 'files', 'test.words')
+        phones = os.path.join('tests', 'files', 'test.phones')
+        log = os.path.join('tests', 'files', 'test.log')
+        txt = os.path.join('tests', 'files', 'test.txt')
+        wav = os.path.join('tests', 'files', 'noise.wav')
+
+        track = Track('test', words, phones, log, txt, wav)
+
+        assert_equal(track.name, 'test')
+
+        assert_equal(len(track.words), 6)
+        assert_equal(len(track.phones), 14)
+        assert_equal(len(track.log), 4)
+        assert_equal(track.txt, [TXT.strip()])
+        assert_equal(track.wav.getnframes(), 9520)
+
+    def test_toplevel_zip_init(self):
+        zip = os.path.join('tests', 'files', 'test.zip')
+
+        track = Track.from_zip(zip, load_wav=True)
+
+        assert_equal(track.name, 'test')
+
+        assert_equal(len(track.words), 6)
+        assert_equal(len(track.phones), 14)
+        assert_equal(len(track.log), 4)
+        assert_equal(track.txt, [TXT.strip()])
+        assert_equal(track.wav.getnframes(), 9520)
+
     def test_repr(self):
-        assert_equal(repr(self.track), 'Track("s02/s0201a.zip")')
+        assert_equal(repr(self.track), 'Track("s0201a")')
 
     def test_str(self):
         assert_equal(str(self.track), '<Track s0201a>')
 
     def test_clip_wav(self):
-        wav_file = BytesIO()
+        wav_file = io.BytesIO()
         self.track.clip_wav(wav_file, 0.0625, 0.075)
 
         wav_file.seek(44)
@@ -189,7 +228,7 @@ class TestTrack(object):
 
     @raises(AttributeError)
     def test_clip_unopened_wav(self):
-        wav_file = BytesIO()
+        wav_file = io.BytesIO()
         self.track_no_wav.clip_wav(wav_file, 0.0625, 0.075)
 
     def test_set_phones(self):
@@ -355,7 +394,7 @@ class TestCorpus(object):
         for speaker in corpus(''):
             pass
 
-        assert_equal(SpeakerMock.call_args_list, expected_calls)
+        assert_equal(SpeakerMock.from_zip.call_args_list, expected_calls)
 
 
 class TestProcessLogs(object):
@@ -377,35 +416,35 @@ class TestProcessLogs(object):
             assert_equal(log.end, self.expected_ends[i])
 
     def test_process_logs(self):
-        logs = list(process_logs(StringIO(LOG)))
+        logs = list(process_logs(io.StringIO(LOG)))
 
         yield self.check_expected, logs
 
     @raises(EOFError)
     def test_process_blank_logs(self):
-        blank_logfile = StringIO('\n\n\n\n')
+        blank_logfile = io.StringIO('\n\n\n\n')
         list(process_logs(blank_logfile))
 
     @raises(EOFError)
     def test_process_empty_logs(self):
-        no_entries = StringIO('header#\n\n\n')
+        no_entries = io.StringIO('header#\n\n\n')
         list(process_logs(no_entries))
 
     def test_blank_line_in_header(self):
         with_spaced_header = '\n\n'.join([LOG[:8], LOG[8:]])
-        logs_spaced = list(process_logs(StringIO(with_spaced_header)))
+        logs_spaced = list(process_logs(io.StringIO(with_spaced_header)))
 
         yield self.check_expected, logs_spaced
 
     def test_blank_line_in_entry(self):
         with_spaced_entry = '\n\n'.join([LOG[:36], LOG[36:]])
-        logs_spaced = list(process_logs(StringIO(with_spaced_entry)))
+        logs_spaced = list(process_logs(io.StringIO(with_spaced_entry)))
 
         yield self.check_expected, logs_spaced
 
     def test_missing_entry(self):
         lines = 'header\n#\n    0.07  121   \n'
-        missing_entry = next(process_logs(StringIO(lines)))
+        missing_entry = next(process_logs(io.StringIO(lines)))
 
         assert_equal(missing_entry.entry, None)
         assert_equal(missing_entry.beg, 0.0)
@@ -433,35 +472,35 @@ class TestProcessPhones(object):
             assert_equal(phone.end, self.expected_ends[i])
 
     def test_process_phones(self):
-        phones = list(process_phones(StringIO(PHONES)))
+        phones = list(process_phones(io.StringIO(PHONES)))
 
         yield self.check_expected, phones
 
     @raises(EOFError)
     def test_process_blank_phones(self):
-        blank_phonesfile = StringIO('\n\n\n\n')
+        blank_phonesfile = io.StringIO('\n\n\n\n')
         list(process_phones(blank_phonesfile))
 
     @raises(EOFError)
     def test_process_empty_phones(self):
-        no_entries = StringIO('header#\n\n\n')
+        no_entries = io.StringIO('header#\n\n\n')
         list(process_phones(no_entries))
 
     def test_blank_line_in_header(self):
         with_spaced_header = '\n\n'.join([PHONES[:8], PHONES[8:]])
-        phones_spaced = list(process_phones(StringIO(with_spaced_header)))
+        phones_spaced = list(process_phones(io.StringIO(with_spaced_header)))
 
         yield self.check_expected, phones_spaced
 
     def test_blank_line_in_entry(self):
         with_spaced_entry = '\n\n'.join([PHONES[:75], PHONES[75:]])
-        phones_spaced = list(process_phones(StringIO(with_spaced_entry)))
+        phones_spaced = list(process_phones(io.StringIO(with_spaced_entry)))
 
         yield self.check_expected, phones_spaced
 
     def test_missing_seg(self):
         lines = 'header\n#\n    0.03  121   \n'
-        missing_seg = next(process_phones(StringIO(lines)))
+        missing_seg = next(process_phones(io.StringIO(lines)))
 
         assert_equal(missing_seg.seg, None)
         assert_equal(missing_seg.beg, 0.0)
@@ -496,36 +535,36 @@ class TestProcessWords(object):
             assert_equal(word.pos, self.expected_pos[i])
 
     def test_process_words(self):
-        words = list(process_words(StringIO(WORDS)))
+        words = list(process_words(io.StringIO(WORDS)))
 
         yield self.check_expected, words
 
     @raises(EOFError)
     def test_process_blank_words(self):
-        blank_wordsfile = StringIO('\n\n\n\n')
+        blank_wordsfile = io.StringIO('\n\n\n\n')
         list(process_words(blank_wordsfile))
 
     @raises(EOFError)
     def test_process_empty_words(self):
-        no_entries = StringIO('header#\n\n\n')
+        no_entries = io.StringIO('header#\n\n\n')
         list(process_words(no_entries))
 
     def test_blank_line_in_header(self):
         with_spaced_header = '\n\n'.join([WORDS[:8], WORDS[8:]])
-        words_spaced = list(process_words(StringIO(with_spaced_header)))
+        words_spaced = list(process_words(io.StringIO(with_spaced_header)))
 
         yield self.check_expected, words_spaced
 
     def test_blank_line_in_entry(self):
         with_spaced_entry = '\n\n'.join([WORDS[:44], WORDS[44:]])
-        words_spaced = list(process_words(StringIO(with_spaced_entry)))
+        words_spaced = list(process_words(io.StringIO(with_spaced_entry)))
 
         yield self.check_expected, words_spaced
 
     def test_pause_in_words(self):
         pause_line = '\n    0.44  121 <SIL>; S; S; null'
         with_pause_entry = pause_line.join([WORDS[:44], WORDS[82:]])
-        words_paused = list(process_words(StringIO(with_pause_entry)))
+        words_paused = list(process_words(io.StringIO(with_pause_entry)))
 
         assert_equal(words_paused[1].beg, 0.15)
         assert_equal(words_paused[1].end, 0.44)
@@ -533,7 +572,7 @@ class TestProcessWords(object):
 
     def test_two_fields(self):
         lines = 'header\n#\n0.15  121 the; DT\n'
-        two_field_word = next(process_words(StringIO(lines)))
+        two_field_word = next(process_words(io.StringIO(lines)))
 
         assert_equal(two_field_word.beg, 0.0)
         assert_equal(two_field_word.end, 0.15)
@@ -544,7 +583,7 @@ class TestProcessWords(object):
 
     def test_three_fields(self):
         lines = 'header\n#\n0.15  121 the; dh iy; DT\n'
-        three_field_word = next(process_words(StringIO(lines)))
+        three_field_word = next(process_words(io.StringIO(lines)))
 
         assert_equal(three_field_word.beg, 0.0)
         assert_equal(three_field_word.end, 0.15)

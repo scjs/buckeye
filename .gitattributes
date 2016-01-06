@@ -1,0 +1,3 @@
+tests/files/* text eol=lf
+*.wav binary
+*.zip binary
