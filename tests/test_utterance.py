@@ -28,18 +28,16 @@ class TestUtterance(object):
         assert_equal(self.utt.end, 1.25)
         assert_equal(self.utt.dur, 1.25 - 0)
         assert_equal(self.utt.words(), self.words)
-        assert_equal(self.utt._Utterance__previous, 1.25)
 
     def test_empty_utterance(self):
         assert_is_none(self.empty_utt.beg)
         assert_is_none(self.empty_utt.end)
         assert_is_none(self.empty_utt.dur)
         assert_equal(self.empty_utt.words(), [])
-        assert_equal(self.empty_utt._Utterance__previous, 0.0)
 
-    @raises(ValueError)
     def test_backwards_utterance(self):
         utt_backwards = Utterance(self.words[::-1])
+        assert_equal(utt_backwards._Utterance__words, self.words)
 
     @raises(AttributeError)
     def test_readonly_beg(self):
@@ -81,12 +79,12 @@ class TestUtterance(object):
         word = Word('uh', 0.25, 0.45, ['ah'], ['ah'], 'UH')
         self.utt.append(word)
 
-    @raises(ValueError)
+    @raises(TypeError)
     def test_append_before_utterance_beg_none(self):
         word = Word('uh', None, 0.45, ['ah'], ['ah'], 'UH')
         self.utt.append(word)
 
-    @raises(ValueError)
+    @raises(TypeError)
     def test_append_before_utterance_end_none(self):
         word = Word('uh', 0.25, None, ['ah'], ['ah'], 'UH')
         self.utt.append(word)
@@ -99,22 +97,15 @@ class TestUtterance(object):
     def test_append_none(self):
         word = Word('the', 0.05, 0.25, ['dh', 'iy'], ['dh'], 'DT')
         utt_append_none = Utterance([word])
-        assert_equal(utt_append_none._Utterance__previous, 0.25)
 
         none_word = Word('uh', None, None, ['ah'], ['ah'], 'UH')
-        utt_append_none.append(none_word)
-        assert_equal(utt_append_none[-1], none_word)
-        assert_equal(utt_append_none._Utterance__previous, 0.25)
+        assert_raises(TypeError, utt_append_none.append, none_word)
 
         none_beg_word = Word('uh', None, 0.5, ['ah'], ['ah'], 'UH')
-        utt_append_none.append(none_beg_word)
-        assert_equal(utt_append_none[-1], none_beg_word)
-        assert_equal(utt_append_none._Utterance__previous, 0.5)
+        assert_raises(TypeError, utt_append_none.append, none_beg_word)
 
         none_end_word = Word('uh', 0.65, None, ['ah'], ['ah'], 'UH')
-        utt_append_none.append(none_end_word)
-        assert_equal(utt_append_none[-1], none_end_word)
-        assert_equal(utt_append_none._Utterance__previous, 0.65)
+        assert_raises(TypeError, utt_append_none.append, none_end_word)
 
     def test_len(self):
         assert_equal(len(self.utt), 6)
@@ -185,9 +176,12 @@ class TestUtterance(object):
         assert_equal(utt.speech_rate(no_syllables='squeeze'), 4/1.25)
 
     def test_speech_rate_none_at_edge(self):
-        words = self.words[:]
-        words[0] = Word('the', None, 0.10, ['dh', 'iy'], ['dh'], 'DT')
-        utt = Utterance(words)
+        utt = Utterance(self.words[:])
+        word = Word('the', None, 0.10, ['dh', 'iy'], ['dh'], 'DT')
+
+        # normally there couldn't be a None-duration word in the utterance
+        # anyway
+        utt._Utterance__words[0] = word
 
         assert_raises(TypeError, utt.speech_rate)
         assert_raises(TypeError, utt.speech_rate, False, 'zero')
@@ -212,8 +206,10 @@ class TestUtterance(object):
         assert_equal(utt_strip.words(), self.words)
 
     def test_strip_beg_invalid(self):
+        # normally couldn't be in utterance
         invalid = Word('', 0.55, 'n/a')
-        utt_strip = Utterance([invalid] + self.words[3:])
+        utt_strip = Utterance()
+        utt_strip._Utterance__words = [invalid] + self.words[3:]
 
         utt_strip.strip()
 
@@ -221,8 +217,10 @@ class TestUtterance(object):
         assert_equal(utt_strip.words(), self.words[3:])
     
     def test_strip_end_invalid(self):
+        # normally couldn't be in utterance
         invalid = Word('', 1.25, 'n/a')
-        utt_strip = Utterance(self.words + [invalid])
+        utt_strip = Utterance()
+        utt_strip._Utterance__words = self.words + [invalid]
 
         utt_strip.strip()
 
@@ -249,9 +247,10 @@ class TestUtterance(object):
 
     def test_strip_beg_multiple(self):
         pause = Pause(beg=0, end=0.55)
-        invalid = Word('', 0.55, None)
+        invalid = Word('', 0.55, None) # normally couldn't be in utterance
         zero = Word('', 0.55, 0.55)
-        utt_strip = Utterance([pause, invalid, zero] + self.words[3:])
+        utt_strip = Utterance()
+        utt_strip._Utterance__words = [pause, invalid, zero] + self.words[3:]
         
         utt_strip.strip()
         
@@ -262,9 +261,10 @@ class TestUtterance(object):
     
     def test_strip_end_multiple(self):
         pause = Pause(beg=1.25, end=1.95)
-        invalid = Word('', 1.95, None)
+        invalid = Word('', 1.95, None) # normally couldn't be in utterance
         zero = Word('', 1.95, 1.95)
-        utt_strip = Utterance(self.words + [pause, invalid, zero])
+        utt_strip = Utterance()
+        utt_strip._Utterance__words = self.words + [pause, invalid, zero]
 
         utt_strip.strip()
 
@@ -281,41 +281,9 @@ class TestUtterance(object):
         
         assert_equal(utt_strip.words(), [])
 
-    def test_update_timestamps(self):
-        self.empty_utt.update_timestamps()
-
-        assert_is_none(self.empty_utt.beg)
-        assert_is_none(self.empty_utt.end)
-        assert_is_none(self.empty_utt.dur)
-
-        word = Word('the', 0.05, 0.25, ['dh', 'iy'], ['dh'], 'DT')
-        na_beg = Word('the', 'n/a', 0.25, ['dh', 'iy'], ['dh'], 'DT')
-        na_end = Word('the', 0.05, 'n/a', ['dh', 'iy'], ['dh'], 'DT')
-
-        utt_u = Utterance()
-
-        # bypass __init__ and append calls to update_timestamps()
-        utt_u._Utterance__words = [word]
-        utt_u.update_timestamps()
-        assert_equal(utt_u.beg, 0.05)
-        assert_equal(utt_u.end, 0.25)
-        assert_equal(utt_u.dur, 0.25 - 0.05)
-
-        utt_u._Utterance__words = [na_beg]
-        utt_u.update_timestamps()
-        assert_is_none(utt_u.beg)
-        assert_equal(utt_u.end, 0.25)
-        assert_is_none(utt_u.dur)
-
-        utt_u._Utterance__words = [na_end]
-        utt_u.update_timestamps()
-        assert_equal(utt_u.beg, 0.05)
-        assert_is_none(utt_u.end)
-        assert_is_none(utt_u.dur)
-
     def test_repr(self):
         expected_repr = ("Utterance(["
-                          "Word('the', 0.0, 0.1, ['dh', 'iy'], ['dh'], 'DT'), "
+                          "Word('the', 0, 0.1, ['dh', 'iy'], ['dh'], 'DT'), "
                           "Word('cat', 0.1, 0.39, ['k', 'ae', 't'], ['k', 'ae', 't'], 'NN'), "
                           "Word('is', 0.39, 0.55, ['ih', 'z'], ['ih', 'z'], 'VB'), "
                           "Word('on', 0.55, 0.73, ['aa', 'n'], ['aan'], 'IN'), "

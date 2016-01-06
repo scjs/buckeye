@@ -63,17 +63,8 @@ class Word(object):
     def __init__(self, orthography, beg, end,
                  phonemic=None, phonetic=None, pos=None):
         self.__orthography = orthography
-
-        try:
-            self.__beg = float(beg)
-        except (TypeError, ValueError):
-            self.__beg = None
-
-        try:
-            self.__end = float(end)
-        except (TypeError, ValueError):
-            self.__end = None
-
+        self.__beg = beg
+        self.__end = end
         self.__phonemic = phonemic
         self.__phonetic = phonetic
         self.__pos = pos
@@ -227,16 +218,8 @@ class Pause(object):
 
     def __init__(self, entry=None, beg=None, end=None):
         self.__entry = entry
-
-        try:
-            self.__beg = float(beg)
-        except (TypeError, ValueError):
-            self.__beg = None
-
-        try:
-            self.__end = float(end)
-        except (TypeError, ValueError):
-            self.__end = None
+        self.__beg = beg
+        self.__end = end
 
         self.phones = None
 
@@ -305,16 +288,8 @@ class LogEntry(object):
 
     def __init__(self, entry, beg=None, end=None):
         self.__entry = entry
-
-        try:
-            self.__beg = float(beg)
-        except (TypeError, ValueError):
-            self.__beg = None
-
-        try:
-            self.__end = float(end)
-        except (TypeError, ValueError):
-            self.__end = None
+        self.__beg = beg
+        self.__end = end
 
     def __repr__(self):
         return 'LogEntry({}, {}, {})'.format(repr(self.entry),
@@ -372,16 +347,8 @@ class Phone(object):
 
     def __init__(self, seg, beg=None, end=None):
         self.__seg = seg
-
-        try:
-            self.__beg = float(beg)
-        except (TypeError, ValueError):
-            self.__beg = None
-
-        try:
-            self.__end = float(end)
-        except (TypeError, ValueError):
-            self.__end = None
+        self.__beg = beg
+        self.__end = end
 
     def __repr__(self):
         return 'Phone({}, {}, {})'.format(repr(self.seg), self.beg, self.end)

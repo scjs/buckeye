@@ -32,26 +32,22 @@ class Utterance(object):
     """
 
     def __init__(self, words=None):
-        self.__beg = None
-        self.__end = None
-
-        self.__previous = 0.0
-
         if words is None:
             self.__words = []
 
         else:
-            for word in words:
-                self.__check_word_timestamps(word)
+            try:
+                words_beg = sorted(words, key=lambda x: float(x.beg))
+                words_end = sorted(words, key=lambda x: float(x.end))
 
-                if word.end is not None:
-                    self.__previous = word.end
+            except (TypeError, ValueError):
+                raise TypeError('All items in utterance must have numeric '
+                                'beg and end attributes')
 
-                elif word.beg is not None:
-                    self.__previous = word.beg
+            if words_beg != words_end:
+                raise ValueError('Overlapping items in utterance')
 
-            self.__words = words
-            self.update_timestamps()
+            self.__words = words_beg
 
     def __repr__(self):
         return 'Utterance({})'.format(repr(self.words()))
@@ -71,66 +67,36 @@ class Utterance(object):
     @property
     def beg(self):
         """Timestamp where the first item in the utterance begins."""
-        return self.__beg
+        try:
+            return self.__words[0].beg
+
+        except IndexError:
+            return None
 
     @property
     def end(self):
         """Timestamp where the last item in the utterance ends."""
-        return self.__end
+        try:
+            return self.__words[-1].end
+
+        except IndexError:
+            return None
 
     @property
     def dur(self):
         """Duration of the utterance, or None if it cannot be calculated."""
         try:
-            return self.__end - self.__beg
+            return self.__words[-1].end - self.__words[0].beg
 
-        except TypeError:
+        except (IndexError, TypeError):
             return None
 
     def words(self):
         """Chronological list of Word and Pause instances in this utterance."""
         return self.__words
 
-    def __check_word_timestamps(self, word):
-        """
-        Private method to check whether an instance can be added to this
-        utterance. It must meet the following requirements:
-
-        1. Has `beg` and `end` attributes
-        2. The instance `beg` time must be greater or equal to the end of the
-        last word in the utterance (or None).
-        3. The instance `end` time must be greater or equal to the end of the
-        last word in the utterance (or None).
-        4. The instance `end` time must be greater or equal to the `beg` time
-        of the instance.
-
-        If the instance doesn't meet all requirements, an exception is raised.
-
-        """
-
-        if not hasattr(word, 'beg') or not hasattr(word, 'end'):
-            raise TypeError('object must have beg and end attributes'
-                            ' to append to Utterance')
-
-        if word.beg is not None and word.beg < self.__previous:
-            raise ValueError('Word beg timestamp: {0} is before last '
-                             'Utterance timestamp: {1}'
-                             .format(str(word.beg), str(self.__previous)))
-
-        if word.end is not None and word.end < self.__previous:
-            raise ValueError('Word end timestamp: {0} is before last '
-                             'Utterance timestamp: {1}'
-                             .format(str(word.end), str(self.__previous)))
-
-        if (word.end is not None and word.beg is not None and
-                word.beg > word.end):
-            raise ValueError('Word beg timestamp: {0} is after Word '
-                             'end timestamp: {1}'
-                             .format(str(word.beg), str(word.end)))
-
-    def append(self, word):
-        """Append an instance to this utterance, and update the `beg` and
-        `end` attributes of the utterance.
+    def append(self, item):
+        """Append an instance to this utterance.
 
         Parameters
         ----------
@@ -144,16 +110,24 @@ class Utterance(object):
 
         """
 
-        self.__check_word_timestamps(word)
-        self.__words.append(word)
+        try:
+            beg = float(item.beg)
+            end = float(item.end)
 
-        if word.end is not None:
-            self.__previous = word.end
+        except (AttributeError, TypeError, ValueError):
+            raise TypeError('Item must have numeric beg and end attributes '
+                            'to append to Utterance')
 
-        elif word.beg is not None:
-            self.__previous = word.beg
+        if beg > end:
+            raise ValueError('Item beg timestamp: {0} is after item end '
+                             'timestamp: {1}'.format(str(item.beg), str(item.end)))
 
-        self.update_timestamps()
+        for word in self.__words:
+            if float(word.beg) > beg and not float(word.beg) > end:
+                raise ValueError('Item overlaps with existing items in utterance')
+
+        self.__words.append(item)
+        self.__words = sorted(self.__words, key=lambda x: float(x.beg))
 
     def __iter__(self):
         return iter(self.__words)
@@ -257,25 +231,6 @@ class Utterance(object):
 
         except StopIteration:
             self.__words = []
-
-        self.update_timestamps()
-
-        return self
-
-    def update_timestamps(self):
-        """Reset the `beg` and `end` properties of this utterance.
-
-        If there are no items in the utterance, both properties will be
-        set to None.
-
-        """
-
-        try:
-            self.__beg = self.__words[0].beg
-            self.__end = self.__words[-1].end
-        except IndexError:
-            self.__beg = None
-            self.__end = None
 
         return self
 
