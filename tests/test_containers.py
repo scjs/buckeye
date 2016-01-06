@@ -187,7 +187,7 @@ class TestLogEntry(object):
         assert_equal(empty_log.entry, '<voiceless-vowel>')
         assert_is_none(empty_log.beg)
         assert_is_none(empty_log.end)
-        assert_is_none(empty_log.dur)
+        assert_raises(AttributeError, getattr, empty_log, 'dur')
 
     @raises(TypeError)
     def test_log_missing(self):
@@ -233,7 +233,7 @@ class TestPhone(object):
         assert_equal(empty_phone.seg, 'th')
         assert_is_none(empty_phone.beg)
         assert_is_none(empty_phone.end)
-        assert_is_none(empty_phone.dur)
+        assert_raises(AttributeError, getattr, empty_phone, 'dur')
 
     @raises(TypeError)
     def test_phone_missing(self):

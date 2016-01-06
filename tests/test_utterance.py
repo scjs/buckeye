@@ -24,32 +24,20 @@ class TestUtterance(object):
         self.empty_utt = Utterance()
 
     def test_utterance(self):
-        assert_equal(self.utt.beg, 0)
-        assert_equal(self.utt.end, 1.25)
-        assert_equal(self.utt.dur, 1.25 - 0)
+        assert_equal(self.utt.beg(), 0)
+        assert_equal(self.utt.end(), 1.25)
+        assert_equal(self.utt.dur(), 1.25 - 0)
         assert_equal(self.utt.words(), self.words)
 
     def test_empty_utterance(self):
-        assert_is_none(self.empty_utt.beg)
-        assert_is_none(self.empty_utt.end)
-        assert_is_none(self.empty_utt.dur)
+        assert_raises(IndexError, self.empty_utt.beg)
+        assert_raises(IndexError, self.empty_utt.end)
+        assert_raises(IndexError, self.empty_utt.dur)
         assert_equal(self.empty_utt.words(), [])
 
     def test_backwards_utterance(self):
         utt_backwards = Utterance(self.words[::-1])
         assert_equal(utt_backwards._Utterance__words, self.words)
-
-    @raises(AttributeError)
-    def test_readonly_beg(self):
-        self.utt.beg = 0.0
-
-    @raises(AttributeError)
-    def test_readonly_end(self):
-        self.utt.end = 1.0
-
-    @raises(AttributeError)
-    def test_readonly_dur(self):
-        self.utt.dur = 1.0
 
     def test_append(self):
         utt_a = Utterance()
@@ -58,17 +46,17 @@ class TestUtterance(object):
         utt_a.append(word)
 
         assert_equal(utt_a.words(), [word])
-        assert_equal(utt_a.beg, 0.05)
-        assert_equal(utt_a.end, 0.25)
-        assert_equal(utt_a.dur, 0.25 - 0.05)
+        assert_equal(utt_a.beg(), 0.05)
+        assert_equal(utt_a.end(), 0.25)
+        assert_equal(utt_a.dur(), 0.25 - 0.05)
 
         uh = Word('uh', 0.25, 0.45, ['ah'], ['ah'], 'UH')
         utt_a.append(uh)
 
         assert_equal(utt_a.words(), [word, uh])
-        assert_equal(utt_a.beg, 0.05)
-        assert_equal(utt_a.end, 0.45)
-        assert_equal(utt_a.dur, 0.45 - 0.05)
+        assert_equal(utt_a.beg(), 0.05)
+        assert_equal(utt_a.end(), 0.45)
+        assert_equal(utt_a.dur(), 0.45 - 0.05)
 
     @raises(TypeError)
     def test_append_missing(self):
@@ -113,8 +101,8 @@ class TestUtterance(object):
     def test_speech_rate(self):
         assert_equal(self.utt.speech_rate(), 4.0)
         assert_equal(self.utt.speech_rate(use_phonetic=False), 4.8)
-        assert_raises(TypeError, self.empty_utt.speech_rate)
-        assert_raises(TypeError, self.empty_utt.speech_rate, False)
+        assert_raises(ValueError, self.empty_utt.speech_rate)
+        assert_raises(ValueError, self.empty_utt.speech_rate, False)
 
     def test_speech_rate_pause_at_beg(self):
         words = [Pause(beg=0, end=0.39)] + self.words[2:]
@@ -204,28 +192,6 @@ class TestUtterance(object):
 
         assert_not_in(pause, utt_strip)
         assert_equal(utt_strip.words(), self.words)
-
-    def test_strip_beg_invalid(self):
-        # normally couldn't be in utterance
-        invalid = Word('', 0.55, 'n/a')
-        utt_strip = Utterance()
-        utt_strip._Utterance__words = [invalid] + self.words[3:]
-
-        utt_strip.strip()
-
-        assert_not_in(invalid, utt_strip)
-        assert_equal(utt_strip.words(), self.words[3:])
-    
-    def test_strip_end_invalid(self):
-        # normally couldn't be in utterance
-        invalid = Word('', 1.25, 'n/a')
-        utt_strip = Utterance()
-        utt_strip._Utterance__words = self.words + [invalid]
-
-        utt_strip.strip()
-
-        assert_not_in(invalid, utt_strip)
-        assert_equal(utt_strip.words(), self.words)
     
     def test_strip_beg_zero(self):
         zero = Word('', 0.0, 0.0)
@@ -246,29 +212,27 @@ class TestUtterance(object):
         assert_equal(utt_strip.words(), self.words)
 
     def test_strip_beg_multiple(self):
-        pause = Pause(beg=0, end=0.55)
-        invalid = Word('', 0.55, None) # normally couldn't be in utterance
-        zero = Word('', 0.55, 0.55)
+        pause = Pause(beg=0, end=0.39)
+        zero = Word('', 0.39, 0.39)
         utt_strip = Utterance()
-        utt_strip._Utterance__words = [pause, invalid, zero] + self.words[3:]
+        utt_strip._Utterance__words = [pause, zero] + self.words[2:]
         
         utt_strip.strip()
         
-        for entry in {pause, invalid, zero}:
+        for entry in {pause, zero}:
             assert_not_in(entry, utt_strip)
 
-        assert_equal(utt_strip.words(), self.words[3:])
+        assert_equal(utt_strip.words(), self.words[2:])
     
     def test_strip_end_multiple(self):
         pause = Pause(beg=1.25, end=1.95)
-        invalid = Word('', 1.95, None) # normally couldn't be in utterance
         zero = Word('', 1.95, 1.95)
         utt_strip = Utterance()
-        utt_strip._Utterance__words = self.words + [pause, invalid, zero]
+        utt_strip._Utterance__words = self.words + [pause, zero]
 
         utt_strip.strip()
 
-        for entry in {pause, invalid, zero}:
+        for entry in {pause, zero}:
             assert_not_in(entry, utt_strip)
 
         assert_equal(utt_strip.words(), self.words)

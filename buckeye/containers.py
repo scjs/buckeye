@@ -139,12 +139,13 @@ class Word(object):
 
     @property
     def dur(self):
-        """Duration of the word, or None if it cannot be calculated."""
+        """Duration of the word."""
         try:
             return self.__end - self.__beg
 
         except TypeError:
-            return None
+            raise AttributeError('Duration is not available if beg and end '
+                                 'are not numeric types')
 
     def syllables(self, phonetic=False):
         """Return the number of syllabic segments in the word.
@@ -256,12 +257,13 @@ class Pause(object):
 
     @property
     def dur(self):
-        """Duration of the entry, or None if it cannot be calculated."""
+        """Duration of the entry."""
         try:
             return self.__end - self.__beg
 
         except TypeError:
-            return None
+            raise AttributeError('Duration is not available if beg and end '
+                                 'are not numeric types')
 
 
 class LogEntry(object):
@@ -315,12 +317,13 @@ class LogEntry(object):
 
     @property
     def dur(self):
-        """Duration of the entry, or None if it cannot be calculated."""
+        """Duration of the entry."""
         try:
             return self.__end - self.__beg
 
         except TypeError:
-            return None
+            raise AttributeError('Duration is not available if beg and end '
+                                 'are not numeric types')
 
 
 class Phone(object):
@@ -373,9 +376,10 @@ class Phone(object):
 
     @property
     def dur(self):
-        """Duration of the phone, or None if it cannot be calculated."""
+        """Duration of the phone."""
         try:
             return self.__end - self.__beg
 
         except TypeError:
-            return None
+            raise AttributeError('Duration is not available if beg and end '
+                                 'are not numeric types')

@@ -21,9 +21,6 @@ class Utterance(object):
 
     Attributes
     ----------
-    beg
-    end
-    dur
     words
 
     Container for a list of entries, such as Word and Pause instances,
@@ -34,20 +31,33 @@ class Utterance(object):
     def __init__(self, words=None):
         if words is None:
             self.__words = []
+            return
 
-        else:
-            try:
-                words_beg = sorted(words, key=lambda x: float(x.beg))
-                words_end = sorted(words, key=lambda x: float(x.end))
+        err = None
 
-            except (TypeError, ValueError):
-                raise TypeError('All items in utterance must have numeric '
-                                'beg and end attributes')
+        try:
+            words = sorted(words, key=lambda x: float(x.beg))
 
-            if words_beg != words_end:
-                raise ValueError('Overlapping items in utterance')
+            flipped = list(filter(lambda x: float(x.beg) > float(x.end),
+                            words))
 
-            self.__words = words_beg
+            overlap = list(filter(lambda x: float(x[0].beg) > float(x[1].end),
+                             zip(words, words[1:])))
+
+            if flipped:
+                err = 'Reversed items in utterance'
+
+            if overlap:
+                err = 'Overlapping items in utterance'
+
+        except (TypeError, ValueError):
+            raise TypeError('All items in utterance must have numeric '
+                            'beg and end attributes')
+
+        if err is not None:
+            raise ValueError(err)
+
+        self.__words = words
 
     def __repr__(self):
         return 'Utterance({})'.format(repr(self.words()))
@@ -64,32 +74,29 @@ class Utterance(object):
 
         return '<Utterance "{}">'.format(' '.join(utt))
 
-    @property
     def beg(self):
         """Timestamp where the first item in the utterance begins."""
         try:
             return self.__words[0].beg
 
         except IndexError:
-            return None
+            raise IndexError('Utterance is empty')
 
-    @property
     def end(self):
         """Timestamp where the last item in the utterance ends."""
         try:
             return self.__words[-1].end
 
         except IndexError:
-            return None
+            raise IndexError('Utterance is empty')
 
-    @property
     def dur(self):
-        """Duration of the utterance, or None if it cannot be calculated."""
+        """Duration of the utterance."""
         try:
             return self.__words[-1].end - self.__words[0].beg
 
-        except (IndexError, TypeError):
-            return None
+        except IndexError:
+            raise IndexError('Utterance is empty')
 
     def words(self):
         """Chronological list of Word and Pause instances in this utterance."""
@@ -101,7 +108,7 @@ class Utterance(object):
         Parameters
         ----------
         word : Word or Pause instance
-            Instance with `beg` and `end` attributes to be added to this
+            Instance with `beg` and `end` attributes to be appended to this
             utterance.
 
         Returns
@@ -180,12 +187,8 @@ class Utterance(object):
             raise ValueError('"no_syllables" argument must be one of "zero", '
                              '"squeeze", or "raise"')
 
-        if self.dur is None:
-            raise TypeError('cannot calculate speech rate if Utterance '
-                            'duration is None')
-
         if not self.__words:
-            return 0.0
+            raise ValueError('Utterance is empty')
 
         syllable_count = 0
 
@@ -208,7 +211,7 @@ class Utterance(object):
             return float(syllable_count) / float(end - beg)
 
         else:
-            return float(syllable_count) / float(self.dur)
+            return float(syllable_count) / float(self.dur())
 
     def strip(self):
         """Strip items that are not Words, or Words where the duration
@@ -216,13 +219,10 @@ class Utterance(object):
         """
 
         try:
-            left = next(i for i in self
-                        if isinstance(i, Word) and
-                        i.dur is not None and i.dur > 0)
+            left = next(i for i in self if isinstance(i, Word) and i.dur > 0)
 
             right = next(i for i in reversed(self.__words)
-                         if isinstance(i, Word) and
-                         i.dur is not None and i.dur > 0)
+                         if isinstance(i, Word) and i.dur > 0)
 
             left_idx = self.__words.index(left)
             right_idx = self.__words.index(right) + 1
