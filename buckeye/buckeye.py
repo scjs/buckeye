@@ -302,24 +302,7 @@ class Track(object):
             left = bisect_left(phone_mids, word.beg)
             right = bisect_left(phone_mids, word.end)
 
-            phones = self.phones[left:right]
-
-            # 21 tracks have a B_TRANS or E_TRANS marker that overlaps a word
-            # 3 tracks have overlapping VOCNOISE and 1 has overlapping LAUGH
-            if (hasattr(word, 'phonetic') and word.phonetic and phones and
-                    len(word.phonetic) != len(phones)):
-                if phones[0].seg in ('{B_TRANS}', 'VOCNOISE', 'LAUGH'):
-                    left = left + 1
-                    phones = self.phones[left:right]
-
-                if phones[-1].seg == '{E_TRANS}':
-                    right = right - 1
-                    phones = self.phones[left:right]
-
-            # 52 close transcriptions in .words files start with a silence
-            # word.misaligned will be marked True
-
-            word.phones = phones
+            word.phones = self.phones[left:right]
 
     def clip_wav(self, clip, beg, end):
         """Write a new .wav file containing a clip from this track.

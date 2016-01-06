@@ -275,47 +275,6 @@ class TestTrack(object):
         self.track.phones[4]._Phone__end = 0.44
         self.track._set_phones()
 
-    def test_set_phones_exclude_left_btrans(self):
-        self.track.phones[2]._Phone__seg = '{B_TRANS}'
-        self.track.words[1]._Word__phonetic = ['ae', 't']
-        self.track._set_phones()
-
-        assert_equal(self.track.words[1].phones[0].seg, 'ae')
-        assert_equal(len(self.track.words[1].phones), 2)
-
-        self.track.phones[2]._Phone__seg = 'k'
-        self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
-        self.track._set_phones()
-
-    def test_set_phones_exclude_right_etrans(self):
-        self.track.phones[4]._Phone__seg = '{E_TRANS}'
-        self.track.words[1]._Word__phonetic = ['k', 'ae']
-        self.track._set_phones()
-
-        assert_equal(self.track.words[1].phones[0].seg, 'k')
-        assert_equal(len(self.track.words[1].phones), 2)
-
-        self.track.phones[4]._Phone__seg = 't'
-        self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
-        self.track._set_phones()
-        
-    def test_set_phones_right_etrans_phonetic_is_none(self):
-        # if the entry has no phonetic transcription, _set_phones() should
-        # always include refs to special phone types (SIL etc)
-
-        self.track.phones[4]._Phone__seg = '{E_TRANS}'
-        self.track.words[1]._Word__phonetic = None
-        self.track._set_phones()
-
-        assert_equal(self.track.words[1].phones[0].seg, 'k')
-        assert_equal(self.track.words[1].phones[1].seg, 'ae')
-        assert_equal(self.track.words[1].phones[2].seg, '{E_TRANS}')
-        assert_equal(len(self.track.words[1].phones), 3)
-
-        self.track.phones[4]._Phone__seg = 't'
-        self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
-        self.track._set_phones()
-
     def test_set_phones_backwards_word(self):
         self.track.words[1]._Word__beg = 0.44
         self.track.words[1]._Word__end = 0.15
