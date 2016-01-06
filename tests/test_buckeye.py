@@ -209,7 +209,7 @@ class TestTrack(object):
         self.track.get_all_phones()
 
     def test_get_all_phones_left_edge_too_long(self):
-        self.track.phones[2]._Phone__beg = 0.06
+        self.track.phones[2]._Phone__beg = 0.01
         self.track.get_all_phones()
 
         assert_equal(self.track.words[1].phones[0].seg, 'ae')
@@ -219,23 +219,22 @@ class TestTrack(object):
         self.track.get_all_phones()
 
     def test_get_all_phones_right_edge_misaligned(self):
-        # get_all_phones() only uses beg and dur, so modify dur
-        self.track.phones[4]._Phone__dur = 0.06
+        self.track.phones[4]._Phone__end = 0.43
         self.track.get_all_phones()
 
         yield self.test_get_all_phones
 
-        self.track.phones[4]._Phone__dur = 0.07
+        self.track.phones[4]._Phone__end = 0.44
         self.track.get_all_phones()
 
     def test_get_all_phones_right_edge_too_long(self):
-        self.track.phones[4]._Phone__dur = 0.15
+        self.track.phones[4]._Phone__end = 0.52
         self.track.get_all_phones()
 
         assert_equal(self.track.words[1].phones[1].seg, 'ae')
         assert_equal(len(self.track.words[1].phones), 2)
 
-        self.track.phones[4]._Phone__dur = 0.07
+        self.track.phones[4]._Phone__end = 0.44
         self.track.get_all_phones()
 
     def test_get_all_phones_exclude_left_btrans(self):
@@ -282,25 +281,21 @@ class TestTrack(object):
     def test_get_all_phones_backwards_word(self):
         self.track.words[1]._Word__beg = 0.44
         self.track.words[1]._Word__end = 0.15
-        self.track.words[1]._Word__dur = -0.29
         self.track.get_all_phones()
 
         assert_equal(self.track.words[1].phones, [])
 
         self.track.words[1]._Word__beg = 0.15
         self.track.words[1]._Word__end = 0.44
-        self.track.words[1]._Word__dur = 0.29
         self.track.get_all_phones()
 
     def test_get_all_phones_zero_word(self):
         self.track.words[1]._Word__end = 0.15
-        self.track.words[1]._Word__dur = 0.0
         self.track.get_all_phones()
 
         assert_equal(self.track.words[1].phones, [])
 
         self.track.words[1]._Word__end = 0.44
-        self.track.words[1]._Word__dur = 0.29
         self.track.get_all_phones()
 
     def test_get_all_phones_phonetic_is_none(self):

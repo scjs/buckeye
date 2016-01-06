@@ -58,28 +58,7 @@ class Word(object):
         self.__phonetic = phonetic
         self.__pos = pos
 
-        self.__phones = None
-        self.__misaligned = False
-
-        try:
-            self.__dur = self.__end - self.__beg
-            if self.__dur < 0:
-                self.__misaligned = True
-
-        except TypeError:
-            self.__dur = None
-
-        try:
-            self.__phonemic_syllables = sum(1 for seg in self.__phonemic
-                                            if seg in SYLLABIC)
-        except TypeError:
-            self.__phonemic_syllables = None
-
-        try:
-            self.__phonetic_syllables = sum(1 for seg in self.__phonetic
-                                            if seg in SYLLABIC)
-        except TypeError:
-            self.__phonetic_syllables = None
+        self.phones = None
 
     def __repr__(self):
         return 'Word({}, {}, {}, {}, {}, {})'.format(repr(self.orthography),
@@ -108,40 +87,24 @@ class Word(object):
         return self.__pos
 
     @property
-    def phones(self):
-        return self.__phones
+    def misaligned(self):
+        if self.dur is not None and self.dur < 0:
+            return True
 
-    @phones.setter
-    def phones(self, phones):
-        self.__phones = phones
+        if self.phones is None:
+            return False
 
         if self.__phonetic is None:
-            self.__misaligned = True
+            return True
 
-        elif len(phones) != len(self.__phonetic):
-            self.__misaligned = True
+        if len(self.phones) != len(self.__phonetic):
+            return True
 
-        else:
-            for i, j in zip(phones, self.__phonetic):
-                if i.seg != j:
-                    self.__misaligned = True
-                    break
+        for i, j in zip(self.phones, self.__phonetic):
+            if i.seg != j:
+                return True
 
-            else:
-                if self.__dur > 0 or self.__dur is None:
-                    self.__misaligned = False
-                    return
-
-        # reaching here means that the phonetic transcription doesn't
-        # line up with the list of phones that was just set, so we need
-        # to re-count the number of phonetic syllables
-        self.__phonetic_syllables = sum(1 for phone in phones
-                                        if phone.seg in SYLLABIC)
-
-
-    @property
-    def misaligned(self):
-        return self.__misaligned
+        return False
 
     @property
     def beg(self):
@@ -153,7 +116,11 @@ class Word(object):
 
     @property
     def dur(self):
-        return self.__dur
+        try:
+            return self.__end - self.__beg
+
+        except TypeError:
+            return None
 
     def syllables(self, phonetic=False):
         """Returns the number of syllabic segments in the Word.
@@ -171,9 +138,20 @@ class Word(object):
         """
 
         if phonetic:
-            return self.__phonetic_syllables
+            if self.phones is not None:
+                transcription = [phone.seg for phone in self.phones]
 
-        return self.__phonemic_syllables
+            else:
+                transcription = self.__phonetic
+
+        else:
+            transcription = self.__phonemic
+
+        try:
+            return sum(1 for seg in transcription if seg in SYLLABIC)
+
+        except TypeError:
+            return None
 
 
 class Pause(object):
@@ -211,17 +189,7 @@ class Pause(object):
         except (TypeError, ValueError):
             self.__end = None
 
-        self.__misaligned = False
-
-        try:
-            self.__dur = self.__end - self.__beg
-            if self.__dur < 0:
-                self.__misaligned = True
-
-        except TypeError:
-            self.__dur = None
-
-        self.__phones = None
+        self.phones = None
 
     def __repr__(self):
         return 'Pause({}, {}, {})'.format(repr(self.entry), self.beg, self.end)
@@ -234,16 +202,11 @@ class Pause(object):
         return self.__entry
 
     @property
-    def phones(self):
-        return self.__phones
-
-    @phones.setter
-    def phones(self, phones):
-        self.__phones = phones
-
-    @property
     def misaligned(self):
-        return self.__misaligned
+        if self.dur < 0:
+            return True
+
+        return False
 
     @property
     def beg(self):
@@ -255,7 +218,11 @@ class Pause(object):
 
     @property
     def dur(self):
-        return self.__dur
+        try:
+            return self.__end - self.__beg
+
+        except TypeError:
+            return None
 
 
 class LogEntry(object):
@@ -284,11 +251,6 @@ class LogEntry(object):
         except (TypeError, ValueError):
             self.__end = None
 
-        try:
-            self.__dur = self.__end - self.__beg
-        except TypeError:
-            self.__dur = None
-
     def __repr__(self):
         return 'LogEntry({}, {}, {})'.format(repr(self.entry),
                                              self.beg, self.end)
@@ -310,7 +272,11 @@ class LogEntry(object):
 
     @property
     def dur(self):
-        return self.__dur
+        try:
+            return self.__end - self.__beg
+
+        except TypeError:
+            return None
 
 
 class Phone(object):
@@ -345,11 +311,6 @@ class Phone(object):
         except (TypeError, ValueError):
             self.__end = None
 
-        try:
-            self.__dur = self.__end - self.__beg
-        except TypeError:
-            self.__dur = None
-
     def __repr__(self):
         return 'Phone({}, {}, {})'.format(repr(self.seg), self.beg, self.end)
 
@@ -370,7 +331,11 @@ class Phone(object):
 
     @property
     def dur(self):
-        return self.__dur
+        try:
+            return self.__end - self.__beg
+
+        except TypeError:
+            return None
 
 
 class Utterance(object):
@@ -411,11 +376,6 @@ class Utterance(object):
             self.__words = words
             self.update_timestamps()
 
-        try:
-            self.__dur = self.__end - self.__beg
-        except TypeError:
-            self.__dur = None
-
     def __repr__(self):
         return 'Utterance({})'.format(repr(self.words()))
 
@@ -441,7 +401,11 @@ class Utterance(object):
 
     @property
     def dur(self):
-        return self.__dur
+        try:
+            return self.__end - self.__beg
+
+        except TypeError:
+            return None
 
     def words(self):
         return self.__words
@@ -605,10 +569,5 @@ class Utterance(object):
         except IndexError:
             self.__beg = None
             self.__end = None
-
-        try:
-            self.__dur = self.__end - self.__beg
-        except TypeError:
-            self.__dur = None
 
         return self
