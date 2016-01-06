@@ -11,7 +11,7 @@ import re
 import wave
 import zipfile
 
-from .containers import Word, Pause, LogEntry, Phone, Utterance
+from .containers import Word, Pause, LogEntry, Phone
 
 
 SPEAKERS = {'s01': ('f', 'y', 'f'), 's02': ('f', 'o', 'm'),
@@ -438,65 +438,3 @@ def process_words(words):
 
         previous = time
         line = words.readline()
-
-def words_to_utterances(words, sep=0.5):
-    """Generator that takes an iterable of Word and Pause instances, such as
-    process_words(), and packs them into Utterance instances.
-
-    A new Utterance is created at the start of the iterable passed to
-    words_to_utterances(), and then whenever there is a sequence of Pause
-    instances that add up to `sep` seconds or more of duration.
-
-    Arguments:
-        words:      iterable of Word and Pause instances
-        sep:        if more than `sep` seconds of Pause instances occur
-                    consecutively, yield the current Utterance instance
-                    and begin a new one. Defaults to 0.5.
-
-    Yields:
-        Utterance instances for each sequence of word entries delimited by
-        >= `sep` seconds (default 0.5) of Pause instances. Pause instances, or
-        Word instances with invalid timestamps, are stripped from the
-        beginning and end of the words list belonging to each yielded
-        Utterance.
-    """
-
-    utt = Utterance()
-    pause_duration = 0.0
-    pause = False
-
-    for word in words:
-        # if this item is a pause token (or a bad Word entry)...
-        if isinstance(word, Pause) or not word.phonetic:
-
-            # skip it if there are no words in the utterance yet
-            if len(utt) == 0:
-                continue
-
-            # if this item doesn't follow another pause, restart the
-            # pause duration
-            if not pause:
-                pause_duration = word.dur
-
-            # otherwise, add it to the cumulative pause duration
-            else:
-                pause_duration += word.dur
-
-            pause = True
-
-        else:
-            pause = False
-
-        utt.append(word)
-
-        # if the total pause duration has reached `sep` seconds, return this
-        # utterance and start a new one
-        if pause_duration >= sep:
-            yield utt.strip()
-
-            utt = Utterance()
-            pause_duration = 0.0
-
-    # return the last utterance if there is one
-    if len(utt) > 0:
-        yield utt.strip()
