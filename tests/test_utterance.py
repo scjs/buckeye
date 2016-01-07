@@ -39,6 +39,24 @@ class TestUtterance(object):
         utt_backwards = Utterance(self.words[::-1])
         assert_equal(utt_backwards._Utterance__words, self.words)
 
+    @raises(TypeError)
+    def test_bad_word_types(self):
+        words = range(4)
+        utt = Utterance(words)
+
+    @raises(ValueError)
+    def test_flipped_word(self):
+        word = Word('the', 0.10, 0, ['dh', 'iy'], ['dh'], 'DT')
+        utt = Utterance([word])
+
+    @raises(ValueError)
+    def test_overlapping_words(self):
+        words = [
+            Word('the', 0, 0.10, ['dh', 'iy'], ['dh'], 'DT'),
+            Word('cat', 0.05, 0.39, ['k', 'ae', 't'], ['k', 'ae', 't'], 'NN')]
+
+        utt = Utterance(words)
+
     def test_append(self):
         utt_a = Utterance()
 
@@ -63,17 +81,17 @@ class TestUtterance(object):
         self.empty_utt.append('the')
 
     @raises(ValueError)
-    def test_append_before_utterance(self):
+    def test_append_overlap(self):
         word = Word('uh', 0.25, 0.45, ['ah'], ['ah'], 'UH')
         self.utt.append(word)
 
     @raises(TypeError)
-    def test_append_before_utterance_beg_none(self):
+    def test_append_beg_none(self):
         word = Word('uh', None, 0.45, ['ah'], ['ah'], 'UH')
         self.utt.append(word)
 
     @raises(TypeError)
-    def test_append_before_utterance_end_none(self):
+    def test_append_end_none(self):
         word = Word('uh', 0.25, None, ['ah'], ['ah'], 'UH')
         self.utt.append(word)
 

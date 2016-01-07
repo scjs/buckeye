@@ -33,29 +33,23 @@ class Utterance(object):
             self.__words = []
             return
 
-        err = None
-
         try:
             words = sorted(words, key=lambda x: float(x.beg))
 
-            flipped = list(filter(lambda x: float(x.beg) > float(x.end),
-                            words))
+            flipped = [True for w in words if float(w.beg) > float(w.end)]
 
-            overlap = list(filter(lambda x: float(x[0].beg) > float(x[1].end),
-                             zip(words, words[1:])))
+            overlap = [True for w1, w2 in zip(words, words[1:])
+                       if float(w1.end) > float(w2.beg)]
 
-            if flipped:
-                err = 'Reversed items in utterance'
-
-            if overlap:
-                err = 'Overlapping items in utterance'
-
-        except (TypeError, ValueError):
+        except (AttributeError, TypeError, ValueError):
             raise TypeError('All items in utterance must have numeric '
                             'beg and end attributes')
 
-        if err is not None:
-            raise ValueError(err)
+        if flipped:
+            raise ValueError('Reversed items in utterance')
+
+        if overlap:
+            raise ValueError('Overlapping items in utterance')
 
         self.__words = words
 
