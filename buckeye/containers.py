@@ -14,10 +14,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+
 SYLLABIC = {'aa', 'ae', 'ay', 'aw', 'ao', 'oy', 'ow', 'eh', 'ey', 'ah', 'uw',
             'uh', 'ih', 'iy', 'er', 'el', 'em', 'en', 'eng', 'aan', 'aen',
             'ayn', 'awn', 'aon', 'oyn', 'own', 'ehn', 'eyn', 'ahn', 'uwn',
             'uhn', 'ihn', 'iyn'}
+
 
 class Word(object):
     """A word entry in the Buckeye Corpus.

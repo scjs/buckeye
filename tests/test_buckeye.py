@@ -61,7 +61,8 @@ WORDS = """header
 TXT = """the cat is on the mat
 """
 
-WAV = io.open(os.path.join('tests', 'files', 'noise.wav'), 'rb').read()
+with io.open(os.path.join('tests', 'files', 'noise.wav'), 'rb') as wav:
+    WAV = wav.read()
 
 
 class TestSpeaker(object):

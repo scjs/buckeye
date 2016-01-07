@@ -47,10 +47,8 @@ SPEAKERS = {'s01': ('f', 'y', 'f'), 's02': ('f', 'o', 'm'),
             's37': ('f', 'y', 'm'), 's38': ('m', 'o', 'm'),
             's39': ('f', 'y', 'm'), 's40': ('m', 'y', 'f')}
 
-PAUSE_RE = re.compile('(<|>|{|}|TRANS|SIL|IVER|ERROR|CUTOFF|'
-                      'EXCLUDE|VOCNOISE|NOISE|UNKNOWN|LAUGH)')
 
-TRACK_RE = re.compile('s[0-4][0-9]/s[0-4][0-9]0[0-6][ab].zip')
+TRACK_RE = r's[0-4][0-9]/s[0-4][0-9]0[0-6][ab]\.zip'
 
 
 class Speaker(object):
@@ -378,6 +376,7 @@ class Track(object):
 
         return logs
 
+
 def corpus(path, load_wavs=False):
     """Yield Speaker instances from a folder of zipped speaker archives.
 
@@ -403,6 +402,7 @@ def corpus(path, load_wavs=False):
 
     for path in paths:
         yield Speaker.from_zip(path, load_wavs)
+
 
 def process_logs(logs):
     """Yield LogEntry instances from a .log file in the Buckeye Corpus.
@@ -452,6 +452,7 @@ def process_logs(logs):
 
         previous = time
         line = logs.readline()
+
 
 def process_phones(phones):
     """Yield Phone instances from a .phones file in the Buckeye Corpus.
@@ -509,6 +510,7 @@ def process_phones(phones):
         previous = time
         line = phones.readline()
 
+
 def process_words(words):
     """Yield Word and Pause instances from a .words file.
 
@@ -558,12 +560,13 @@ def process_words(words):
             # E_TRANS entries
             if len(fields) == 2:
                 word, pos = fields
-                phonemic = phonetic = None
+                phonemic = None
 
             elif len(fields) == 3:
                 word, phonemic, pos = fields
                 phonemic = phonemic.split()
-                phonetic = None
+
+            phonetic = None
 
         # s1801a has a missing newline in the first entry, with SIL and
         # B_TRANS on the same line with the same timestamp
