@@ -159,7 +159,7 @@ class Utterance(object):
         no_syllables : {'zero', 'squeeze', 'raise'}
             If 'zero', any items in the utterance without a
             `syllables` property are treated as having zero syllables
-            for the speech rate calculation. Default is 'zero'.
+            for the speech rate calculation.
 
             If 'squeeze`, the same behavior as 'zero', plus any items
             at the beginning or end of the utterance with no `syllables`
@@ -167,7 +167,8 @@ class Utterance(object):
             duration.
 
             If 'raise', a ValueError is raised if the utterance includes
-            any items without a `syllables` attribute.
+            any items without a `syllables` attribute. Default is
+            'raise'.
 
         Returns
         -------
