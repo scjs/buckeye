@@ -361,7 +361,7 @@ class Track(object):
 
         """
 
-        left_idx = max(0, bisect.bisect(self._log_ends, beg))
+        left_idx = bisect.bisect(self._log_ends, beg)
         right_idx = bisect.bisect_left(self._log_begs, end)
 
         return self.log[left_idx:right_idx]
