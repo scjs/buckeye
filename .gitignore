@@ -3,6 +3,8 @@
 *.coverage
 speakers/
 scratch/
+s0303b.zip
+tracks/
 
 # Distribution / packaging
 .Python
