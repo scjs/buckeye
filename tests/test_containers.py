@@ -80,15 +80,15 @@ class TestWord(object):
         phone_th = Phone('th')
         phone_dh = Phone('dh')
 
-        self.word.phones = [phone_th]
+        self.word._phones = [phone_th]
         assert_in(phone_th, self.word.phones)
         assert_true(self.word.misaligned)
 
-        self.word.phones = [phone_dh]
+        self.word._phones = [phone_dh]
         assert_in(phone_dh, self.word.phones)
         assert_false(self.word.misaligned)
 
-        self.word.phones = []
+        self.word._phones = []
         assert_true(self.word.misaligned)
 
     def test_misaligned(self):
@@ -96,7 +96,7 @@ class TestWord(object):
         assert_true(misaligned_word.misaligned)
 
         phone_dh = Phone('dh')
-        misaligned_word.phones = [phone_dh]
+        misaligned_word._phones = [phone_dh]
         assert_true(misaligned_word.misaligned)
 
     def test_misaligned_zero(self):
@@ -144,11 +144,11 @@ class TestPause(object):
 
         phone_sil = Phone('SIL')
 
-        self.pause.phones = [phone_sil]
+        self.pause._phones = [phone_sil]
         assert_in(phone_sil, self.pause.phones)
         assert_false(self.pause.misaligned)
 
-        self.pause.phones = []
+        self.pause._phones = []
         assert_false(self.pause.misaligned)
 
     def test_misaligned(self):
@@ -156,7 +156,7 @@ class TestPause(object):
         assert_true(misaligned_pause.misaligned)
 
         phone_sil = Phone('SIL')
-        misaligned_pause.phones = [phone_sil]
+        misaligned_pause._phones = [phone_sil]
         assert_true(misaligned_pause.misaligned)
 
     def test_misaligned_zero(self):

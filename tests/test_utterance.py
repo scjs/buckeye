@@ -37,7 +37,7 @@ class TestUtterance(object):
 
     def test_backwards_utterance(self):
         utt_backwards = Utterance(self.words[::-1])
-        assert_equal(utt_backwards._Utterance__words, self.words)
+        assert_equal(utt_backwards._words, self.words)
 
     @raises(TypeError)
     def test_bad_word_types(self):
@@ -187,7 +187,7 @@ class TestUtterance(object):
 
         # normally there couldn't be a None-duration word in the utterance
         # anyway
-        utt._Utterance__words[0] = word
+        utt._words[0] = word
 
         assert_raises(TypeError, utt.speech_rate)
         assert_raises(TypeError, utt.speech_rate, False, 'zero')
@@ -233,7 +233,7 @@ class TestUtterance(object):
         pause = Pause(beg=0, end=0.39)
         zero = Word('', 0.39, 0.39)
         utt_strip = Utterance()
-        utt_strip._Utterance__words = [pause, zero] + self.words[2:]
+        utt_strip._words = [pause, zero] + self.words[2:]
         
         utt_strip.strip()
         
@@ -246,7 +246,7 @@ class TestUtterance(object):
         pause = Pause(beg=1.25, end=1.95)
         zero = Word('', 1.95, 1.95)
         utt_strip = Utterance()
-        utt_strip._Utterance__words = self.words + [pause, zero]
+        utt_strip._words = self.words + [pause, zero]
 
         utt_strip.strip()
 

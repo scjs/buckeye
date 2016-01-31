@@ -30,7 +30,7 @@ class Utterance(object):
 
     def __init__(self, words=None):
         if words is None:
-            self.__words = []
+            self._words = []
             return
 
         try:
@@ -51,7 +51,7 @@ class Utterance(object):
         if overlap:
             raise ValueError('Overlapping items in utterance')
 
-        self.__words = words
+        self._words = words
 
     def __repr__(self):
         return 'Utterance({})'.format(repr(self.words()))
@@ -59,7 +59,7 @@ class Utterance(object):
     def __str__(self):
         utt = []
 
-        for word in self.__words:
+        for word in self._words:
             if hasattr(word, 'orthography'):
                 utt.append(word.orthography)
 
@@ -71,7 +71,7 @@ class Utterance(object):
     def beg(self):
         """Timestamp where the first item in the utterance begins."""
         try:
-            return self.__words[0].beg
+            return self._words[0].beg
 
         except IndexError:
             raise IndexError('Utterance is empty')
@@ -79,7 +79,7 @@ class Utterance(object):
     def end(self):
         """Timestamp where the last item in the utterance ends."""
         try:
-            return self.__words[-1].end
+            return self._words[-1].end
 
         except IndexError:
             raise IndexError('Utterance is empty')
@@ -87,14 +87,14 @@ class Utterance(object):
     def dur(self):
         """Duration of the utterance."""
         try:
-            return self.__words[-1].end - self.__words[0].beg
+            return self._words[-1].end - self._words[0].beg
 
         except IndexError:
             raise IndexError('Utterance is empty')
 
     def words(self):
         """Chronological list of Word and Pause instances in this utterance."""
-        return self.__words
+        return self._words
 
     def append(self, item):
         """Append an instance to this utterance.
@@ -123,21 +123,21 @@ class Utterance(object):
             raise ValueError('Item beg timestamp: {0} is after item end '
                              'timestamp: {1}'.format(str(item.beg), str(item.end)))
 
-        for word in self.__words:
+        for word in self._words:
             if float(word.beg) > beg and not float(word.beg) > end:
                 raise ValueError('Item overlaps with existing items in utterance')
 
-        self.__words.append(item)
-        self.__words = sorted(self.__words, key=lambda x: float(x.beg))
+        self._words.append(item)
+        self._words = sorted(self._words, key=lambda x: float(x.beg))
 
     def __iter__(self):
-        return iter(self.__words)
+        return iter(self._words)
 
     def __getitem__(self, i):
-        return self.__words[i]
+        return self._words[i]
 
     def __len__(self):
-        return len(self.__words)
+        return len(self._words)
 
     def speech_rate(self, use_phonetic=True, no_syllables='raise'):
         """Return the number of syllables per second in this utterance.
@@ -182,12 +182,12 @@ class Utterance(object):
             raise ValueError('"no_syllables" argument must be one of "zero", '
                              '"squeeze", or "raise"')
 
-        if not self.__words:
+        if not self._words:
             raise ValueError('Utterance is empty')
 
         syllable_count = 0
 
-        for word in self.__words:
+        for word in self._words:
             if hasattr(word, 'syllables'):
                 syllable_count += word.syllables(use_phonetic)
 
@@ -197,10 +197,10 @@ class Utterance(object):
                                  'rate')
 
         if no_syllables == 'squeeze':
-            beg = next(word.beg for word in self.__words
+            beg = next(word.beg for word in self._words
                        if hasattr(word, 'syllables'))
 
-            end = next(word.end for word in reversed(self.__words)
+            end = next(word.end for word in reversed(self._words)
                        if hasattr(word, 'syllables'))
 
             return float(syllable_count) / float(end - beg)
@@ -216,16 +216,16 @@ class Utterance(object):
         try:
             left = next(i for i in self if isinstance(i, Word) and i.dur > 0)
 
-            right = next(i for i in reversed(self.__words)
+            right = next(i for i in reversed(self._words)
                          if isinstance(i, Word) and i.dur > 0)
 
-            left_idx = self.__words.index(left)
-            right_idx = self.__words.index(right) + 1
+            left_idx = self._words.index(left)
+            right_idx = self._words.index(right) + 1
 
-            self.__words = self.__words[left_idx:right_idx]
+            self._words = self._words[left_idx:right_idx]
 
         except StopIteration:
-            self.__words = []
+            self._words = []
 
         return self
 

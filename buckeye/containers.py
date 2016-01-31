@@ -54,54 +54,56 @@ class Word(object):
     phonetic
     pos
     dur
-    phones : list of Phone
-        List of Phone instances with timestamps for the close phonetic
-        transcription of the word.
-
+    phones
     misaligned
 
     """
 
     def __init__(self, orthography, beg, end,
                  phonemic=None, phonetic=None, pos=None):
-        self.__orthography = orthography
-        self.__beg = beg
-        self.__end = end
-        self.__phonemic = phonemic
-        self.__phonetic = phonetic
-        self.__pos = pos
+        self._orthography = orthography
+        self._beg = beg
+        self._end = end
+        self._phonemic = phonemic
+        self._phonetic = phonetic
+        self._pos = pos
 
-        self.phones = None
+        self._phones = None
 
     def __repr__(self):
-        return 'Word({}, {}, {}, {}, {}, {})'.format(repr(self.orthography),
-                                                     self.beg, self.end,
-                                                     repr(self.phonemic),
-                                                     repr(self.phonetic),
-                                                     repr(self.pos))
+        return 'Word({}, {}, {}, {}, {}, {})'.format(repr(self._orthography),
+                                                     self._beg, self._end,
+                                                     repr(self._phonemic),
+                                                     repr(self._phonetic),
+                                                     repr(self._pos))
 
     def __str__(self):
-        return '<Word "{}" at {}>'.format(self.orthography, self.beg)
+        return '<Word "{}" at {}>'.format(self._orthography, self._beg)
 
     @property
     def orthography(self):
         """Written form of the word, or another label for this entry."""
-        return self.__orthography
+        return self._orthography
 
     @property
     def phonemic(self):
         """Transcription of the word's dictionary or citation form."""
-        return self.__phonemic
+        return self._phonemic
+
+    @property
+    def phones(self):
+        """List of Phone instances that correspond to the word."""
+        return self._phones
 
     @property
     def phonetic(self):
         """Close phonetic transcription of the word."""
-        return self.__phonetic
+        return self._phonetic
 
     @property
     def pos(self):
         """Part of speech."""
-        return self.__pos
+        return self._pos
 
     @property
     def misaligned(self):
@@ -114,16 +116,16 @@ class Word(object):
         if self.dur is not None and self.dur < 0:
             return True
 
-        if self.phones is None:
+        if self._phones is None:
             return False
 
-        if self.__phonetic is None:
+        if self._phonetic is None:
             return True
 
-        if len(self.phones) != len(self.__phonetic):
+        if len(self._phones) != len(self._phonetic):
             return True
 
-        for i, j in zip(self.phones, self.__phonetic):
+        for i, j in zip(self._phones, self._phonetic):
             if i.seg != j:
                 return True
 
@@ -132,18 +134,18 @@ class Word(object):
     @property
     def beg(self):
         """Timestamp where the word begins."""
-        return self.__beg
+        return self._beg
 
     @property
     def end(self):
         """Timestamp where the word ends."""
-        return self.__end
+        return self._end
 
     @property
     def dur(self):
         """Duration of the word."""
         try:
-            return self.__end - self.__beg
+            return self._end - self._beg
 
         except TypeError:
             raise AttributeError('Duration is not available if beg and end '
@@ -171,14 +173,14 @@ class Word(object):
         """
 
         if phonetic:
-            if self.phones is not None:
-                transcription = [phone.seg for phone in self.phones]
+            if self._phones is not None:
+                transcription = [phone.seg for phone in self._phones]
 
             else:
-                transcription = self.__phonetic
+                transcription = self._phonetic
 
         else:
-            transcription = self.__phonemic
+            transcription = self._phonemic
 
         try:
             return sum(1 for seg in transcription if seg in SYLLABIC)
@@ -211,31 +213,29 @@ class Pause(object):
     entry
     beg
     end
-    phones : list of Phone
-        List of Phone instances with timestamps for the close phonetic
-        transcription of the word.
+    phones
     dur
     misaligned
 
     """
 
     def __init__(self, entry=None, beg=None, end=None):
-        self.__entry = entry
-        self.__beg = beg
-        self.__end = end
+        self._entry = entry
+        self._beg = beg
+        self._end = end
 
-        self.phones = None
+        self._phones = None
 
     def __repr__(self):
-        return 'Pause({}, {}, {})'.format(repr(self.entry), self.beg, self.end)
+        return 'Pause({}, {}, {})'.format(repr(self._entry), self._beg, self._end)
 
     def __str__(self):
-        return '<Pause {} at {}>'.format(self.entry, self.beg)
+        return '<Pause {} at {}>'.format(self._entry, self._beg)
 
     @property
     def entry(self):
         """Written label for this entry."""
-        return self.__entry
+        return self._entry
 
     @property
     def misaligned(self):
@@ -248,20 +248,25 @@ class Pause(object):
         return False
 
     @property
+    def phones(self):
+        """List of Phone instances that correspond to the pause."""
+        return self._phones
+
+    @property
     def beg(self):
         """Timestamp where the entry begins."""
-        return self.__beg
+        return self._beg
 
     @property
     def end(self):
         """Timestamp where the entry ends."""
-        return self.__end
+        return self._end
 
     @property
     def dur(self):
         """Duration of the entry."""
         try:
-            return self.__end - self.__beg
+            return self._end - self._beg
 
         except TypeError:
             raise AttributeError('Duration is not available if beg and end '
@@ -291,37 +296,37 @@ class LogEntry(object):
     """
 
     def __init__(self, entry, beg=None, end=None):
-        self.__entry = entry
-        self.__beg = beg
-        self.__end = end
+        self._entry = entry
+        self._beg = beg
+        self._end = end
 
     def __repr__(self):
-        return 'LogEntry({}, {}, {})'.format(repr(self.entry),
-                                             self.beg, self.end)
+        return 'LogEntry({}, {}, {})'.format(repr(self._entry),
+                                             self._beg, self._end)
 
     def __str__(self):
-        return '<Log "{}" at {}>'.format(self.entry, self.beg)
+        return '<Log "{}" at {}>'.format(self._entry, self._beg)
 
     @property
     def entry(self):
         """Written label for this entry."""
-        return self.__entry
+        return self._entry
 
     @property
     def beg(self):
         """Timestamp where the entry begins."""
-        return self.__beg
+        return self._beg
 
     @property
     def end(self):
         """Timestamp where the entry ends."""
-        return self.__end
+        return self._end
 
     @property
     def dur(self):
         """Duration of the entry."""
         try:
-            return self.__end - self.__beg
+            return self._end - self._beg
 
         except TypeError:
             raise AttributeError('Duration is not available if beg and end '
@@ -351,36 +356,36 @@ class Phone(object):
     """
 
     def __init__(self, seg, beg=None, end=None):
-        self.__seg = seg
-        self.__beg = beg
-        self.__end = end
+        self._seg = seg
+        self._beg = beg
+        self._end = end
 
     def __repr__(self):
-        return 'Phone({}, {}, {})'.format(repr(self.seg), self.beg, self.end)
+        return 'Phone({}, {}, {})'.format(repr(self._seg), self._beg, self._end)
 
     def __str__(self):
-        return '<Phone [{}] at {}>'.format(self.seg, self.beg)
+        return '<Phone [{}] at {}>'.format(self._seg, self._beg)
 
     @property
     def seg(self):
         """Label for this phone (e.g., using ARPABET transcription)."""
-        return self.__seg
+        return self._seg
 
     @property
     def beg(self):
         """Timestamp where the phone begins."""
-        return self.__beg
+        return self._beg
 
     @property
     def end(self):
         """Timestamp where the phone ends."""
-        return self.__end
+        return self._end
 
     @property
     def dur(self):
         """Duration of the phone."""
         try:
-            return self.__end - self.__beg
+            return self._end - self._beg
 
         except TypeError:
             raise AttributeError('Duration is not available if beg and end '

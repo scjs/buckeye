@@ -239,70 +239,70 @@ class TestTrack(object):
         assert_equal(len(self.track.words[1].phones), 3)
 
     def test_set_phones_left_edge_misaligned(self):
-        self.track.phones[2]._Phone__beg = 0.18
+        self.track.phones[2]._beg = 0.18
         self.track._set_phones()
 
         yield self.test_set_phones
 
-        self.track.phones[2]._Phone__beg = 0.15
+        self.track.phones[2]._beg = 0.15
         self.track._set_phones()
 
     def test_set_phones_left_edge_too_long(self):
-        self.track.phones[2]._Phone__beg = 0.01
+        self.track.phones[2]._beg = 0.01
         self.track._set_phones()
 
         assert_equal(self.track.words[1].phones[0].seg, 'ae')
         assert_equal(len(self.track.words[1].phones), 2)
 
-        self.track.phones[2]._Phone__beg = 0.15
+        self.track.phones[2]._beg = 0.15
         self.track._set_phones()
 
     def test_set_phones_right_edge_misaligned(self):
-        self.track.phones[4]._Phone__end = 0.43
+        self.track.phones[4]._end = 0.43
         self.track._set_phones()
 
         yield self.test_set_phones
 
-        self.track.phones[4]._Phone__end = 0.44
+        self.track.phones[4]._end = 0.44
         self.track._set_phones()
 
     def test_set_phones_right_edge_too_long(self):
-        self.track.phones[4]._Phone__end = 0.52
+        self.track.phones[4]._end = 0.52
         self.track._set_phones()
 
         assert_equal(self.track.words[1].phones[1].seg, 'ae')
         assert_equal(len(self.track.words[1].phones), 2)
 
-        self.track.phones[4]._Phone__end = 0.44
+        self.track.phones[4]._end = 0.44
         self.track._set_phones()
 
     def test_set_phones_backwards_word(self):
-        self.track.words[1]._Word__beg = 0.44
-        self.track.words[1]._Word__end = 0.15
+        self.track.words[1]._beg = 0.44
+        self.track.words[1]._end = 0.15
         self.track._set_phones()
 
         assert_equal(self.track.words[1].phones, [])
 
-        self.track.words[1]._Word__beg = 0.15
-        self.track.words[1]._Word__end = 0.44
+        self.track.words[1]._beg = 0.15
+        self.track.words[1]._end = 0.44
         self.track._set_phones()
 
     def test_set_phones_zero_word(self):
-        self.track.words[1]._Word__end = 0.15
+        self.track.words[1]._end = 0.15
         self.track._set_phones()
 
         assert_equal(self.track.words[1].phones, [])
 
-        self.track.words[1]._Word__end = 0.44
+        self.track.words[1]._end = 0.44
         self.track._set_phones()
 
     def test_set_phones_phonetic_is_none(self):
-        self.track.words[1]._Word__phonetic = None
+        self.track.words[1]._phonetic = None
         self.track._set_phones()
 
         yield self.test_set_phones
 
-        self.track.words[1]._Word__phonetic = ['k', 'ae', 't']
+        self.track.words[1]._phonetic = ['k', 'ae', 't']
         self.track._set_phones()
 
     def test_get_logs_too_early(self):

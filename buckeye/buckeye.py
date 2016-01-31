@@ -301,7 +301,7 @@ class Track(object):
             left = bisect.bisect_left(phone_mids, word.beg)
             right = bisect.bisect_left(phone_mids, word.end)
 
-            word.phones = self.phones[left:right]
+            word._phones = self.phones[left:right]
 
     def clip_wav(self, clip, beg, end):
         """Write a new .wav file containing a clip from this track.
