@@ -319,25 +319,56 @@ class TestTrack(object):
         assert_equal(len(logs), 1)
         assert_equal(logs[0].entry, '<CONF=L>')
 
-    def test_get_logs_left_overlap(self):
-        logs = self.track.get_logs(0.35, 0.99)
-        expected = ['<CONF=L>', '<VOICE=modal>']
+    def test_get_logs_exact_two(self):
+        logs = self.track.get_logs(0.24, 0.99)
 
         assert_equal(len(logs), 2)
-        assert_equal(logs[0].entry, expected[0])
-        assert_equal(logs[1].entry, expected[1])
+        assert_equal(logs[0].entry, '<CONF=L>')
+        assert_equal(logs[1].entry, '<VOICE=modal>')
+
+    def test_get_logs_left_overlap(self):
+        logs = self.track.get_logs(0.35, 0.99)
+
+        assert_equal(len(logs), 2)
+        assert_equal(logs[0].entry, '<CONF=L>')
+        assert_equal(logs[1].entry, '<VOICE=modal>')
 
     def test_get_logs_right_overlap(self):
         logs = self.track.get_logs(0.24, 0.39)
-        expected = ['<CONF=L>', '<VOICE=modal>']
 
         assert_equal(len(logs), 2)
-        assert_equal(logs[0].entry, expected[0])
-        assert_equal(logs[1].entry, expected[1])
+        assert_equal(logs[0].entry, '<CONF=L>')
+        assert_equal(logs[1].entry, '<VOICE=modal>')
+
+    def get_logs_all(self):
+        logs = self.track.get_logs(0, 1.19)
+
+        assert_equal(len(logs), 4)
+        assert_equal(logs[0].entry, '<VOICE=modal>')
+        assert_equal(logs[1].entry, '<CONF=L>')
+        assert_equal(logs[2].entry, '<VOICE=modal>')
+        assert_equal(logs[3].entry, '<VOICE=creaky>')
 
     def test_get_logs_backwards(self):
         logs = self.track.get_logs(0.39, 0.22)
         assert_equal(logs, [])
+
+    def get_logs_backwards_all(self):
+        logs = self.track.get_logs(1.19, 0)
+        assert_equal(logs, [])
+
+    def test_get_logs_last_overlap(self):
+        logs = self.track.get_logs(1.0, 1.2)
+
+        assert_equal(len(logs), 1)
+        assert_equal(logs[0].entry, '<VOICE=creaky>')
+
+    def test_get_logs_last_overlap_two(self):
+        logs = self.track.get_logs(0.98, 1.2)
+
+        assert_equal(len(logs), 2)
+        assert_equal(logs[0].entry, '<VOICE=modal>')
+        assert_equal(logs[1].entry, '<VOICE=creaky>')
 
 
 class TestCorpus(object):

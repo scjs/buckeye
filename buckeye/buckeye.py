@@ -14,11 +14,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from bisect import bisect_left
-from os.path import basename, splitext, join
 
+import bisect
 import glob
 import io
+import os.path
 import re
 import wave
 import zipfile
@@ -109,7 +109,7 @@ class Speaker(object):
 
         """
 
-        name = splitext(basename(path))[0]
+        name = os.path.splitext(os.path.basename(path))[0]
 
         tracks = []
 
@@ -230,7 +230,8 @@ class Track(object):
         # add references in self.words to the corresponding self.phones
         self._set_phones()
 
-        # make a list of the log entry endpoints to quickly search later
+        # make a list of the log entry timestamps to quickly search later
+        self._log_begs = [l.beg for l in self.log]
         self._log_ends = [l.end for l in self.log]
 
     def __repr__(self):
@@ -266,7 +267,7 @@ class Track(object):
         if data is None:
             data = zipfile.ZipFile(path)
 
-        name = splitext(basename(path))[0]
+        name = os.path.splitext(os.path.basename(path))[0]
 
         words = io.StringIO(data.read(name + '.words').decode('latin-1'))
         phones = io.StringIO(data.read(name + '.phones').decode('latin-1'))
@@ -297,8 +298,8 @@ class Track(object):
         phone_mids = [p.beg + 0.5 * p.dur for p in self.phones]
 
         for word in self.words:
-            left = bisect_left(phone_mids, word.beg)
-            right = bisect_left(phone_mids, word.end)
+            left = bisect.bisect_left(phone_mids, word.beg)
+            right = bisect.bisect_left(phone_mids, word.end)
 
             word.phones = self.phones[left:right]
 
@@ -337,44 +338,33 @@ class Track(object):
         wav_out.close()
 
     def get_logs(self, beg, end):
-        """Return log entries within, or overlapping with, the given times.
+        """Return log entries that overlap with a given interval.
+
+        The interval does not include the log entry boundaries. For
+        example, calling `get_logs(1.5, 2)` will not return a log entry
+        that extends from 1.25 seconds to 1.5 seconds, or one that
+        extends from 2 seconds to 2.5 seconds.
 
         Parameters
         ----------
         beg : float
-            Log entries that begin after or overlap with this time will
-            be included in the returned list.
+            Beginning of the interval.
 
         end : float
-            Log entries that end before or overlap with this time will be
-            included in the returned list.
+            End of the interval.
 
         Returns
         -------
         logs : list of LogEntry
             List of references to the LogEntry instances in this track
-            that are within the given times.
+            that overlap with the interval given by `[beg, end]`.
 
         """
 
-        # returns all log intervals that overlap with the times given
-        logs = []
+        left_idx = max(0, bisect.bisect(self._log_ends, beg))
+        right_idx = bisect.bisect_left(self._log_begs, end)
 
-        log_idx = bisect_left(self._log_ends, beg)
-
-        try:
-            if self.log[log_idx].end == beg:
-                log_idx += 1
-
-        except IndexError:
-            # the log tier ends before the beg time
-            return logs
-
-        while log_idx + 1 < len(self.log) and self.log[log_idx].beg < end:
-            logs.append(self.log[log_idx])
-            log_idx += 1
-
-        return logs
+        return self.log[left_idx:right_idx]
 
 
 def corpus(path, load_wavs=False):
@@ -398,7 +388,7 @@ def corpus(path, load_wavs=False):
 
     """
 
-    paths = sorted(glob.glob(join(path, 's[0-4][0-9].zip')))
+    paths = sorted(glob.glob(os.path.join(path, 's[0-4][0-9].zip')))
 
     for path in paths:
         yield Speaker.from_zip(path, load_wavs)
