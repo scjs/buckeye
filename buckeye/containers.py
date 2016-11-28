@@ -108,12 +108,12 @@ class Word(object):
     @property
     def misaligned(self):
         """A flag for whether there is an obvious issue with the
-        time-alignment of this word. True if `dur` can be calculated but
-        is negative, or if the Phones that correspond to this word's
-        timestamps don't match up with the given close phonetic
-        transcription in `phonetic`. Otherwise False."""
+        time-alignment of this word. True if `dur` is negative, or if
+        the Phones that correspond to this word's timestamps don't
+        match up with the given close phonetic transcription in
+        `phonetic`. Otherwise False."""
 
-        if self.dur is not None and self.dur < 0:
+        if self.dur < 0:
             return True
 
         if self._phones is None:
@@ -240,9 +240,10 @@ class Pause(object):
     @property
     def misaligned(self):
         """A flag for whether there is an obvious issue with the
-        time-alignment of this entry. True if `dur` can be calculated but
-        is negative. Otherwise False."""
-        if self.dur is not None and self.dur < 0:
+        time-alignment of this entry. True if `dur` is negative.
+        Otherwise False."""
+
+        if self.dur < 0:
             return True
 
         return False
