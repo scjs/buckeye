@@ -61,7 +61,7 @@ WORDS = """header
 TXT = """the cat is on the mat
 """
 
-with io.open(os.path.join('tests', 'files', 'noise.wav'), 'rb') as wav:
+with io.open(os.path.join('test', 'files', 'noise.wav'), 'rb') as wav:
     WAV = wav.read()
 
 
@@ -164,11 +164,11 @@ class TestTrack(object):
         self.track_no_wav.wav
 
     def test_default_init(self):
-        words = os.path.join('tests', 'files', 'test.words')
-        phones = os.path.join('tests', 'files', 'test.phones')
-        log = os.path.join('tests', 'files', 'test.log')
-        txt = os.path.join('tests', 'files', 'test.txt')
-        wav = os.path.join('tests', 'files', 'noise.wav')
+        words = os.path.join('test', 'files', 'test.words')
+        phones = os.path.join('test', 'files', 'test.phones')
+        log = os.path.join('test', 'files', 'test.log')
+        txt = os.path.join('test', 'files', 'test.txt')
+        wav = os.path.join('test', 'files', 'noise.wav')
 
         track = Track('test', words, phones, log, txt, wav)
 
@@ -181,7 +181,7 @@ class TestTrack(object):
         assert_equal(track.wav.getnframes(), 9520)
 
     def test_toplevel_zip_init(self):
-        zip = os.path.join('tests', 'files', 'test.zip')
+        zip = os.path.join('test', 'files', 'test.zip')
 
         track = Track.from_zip(zip, load_wav=True)
 

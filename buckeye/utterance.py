@@ -22,9 +22,8 @@ class Utterance(object):
     Attributes
     ----------
     words
-
-    Container for a list of entries, such as Word and Pause instances,
-    that make up an utterance in the speech corpus.
+        Container for a list of entries, such as Word and Pause instances,
+        that make up an utterance in the speech corpus.
 
     """
 

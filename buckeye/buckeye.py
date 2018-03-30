@@ -1,12 +1,5 @@
 """Classes and functions to read and loop through the Buckeye Corpus.
 
-References
-----------
-Pitt, M.A., Dilley, L., Johnson, K., Kiesling, S., Raymond, W., Hume, E.
- and Fosler-Lussier, E. (2007) Buckeye Corpus of Conversational Speech
- (2nd release) [www.buckeyecorpus.osu.edu] Columbus, OH: Department of
- Psychology, Ohio State University (Distributor).
-
 """
 
 from __future__ import absolute_import

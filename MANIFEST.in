@@ -1,0 +1,2 @@
+include test/files/*
+include Quickstart.ipynb
