@@ -108,10 +108,10 @@ class Speaker(object):
 
         speaker = zipfile.ZipFile(path)
 
-        for path in sorted(speaker.namelist()):
-            if re.match(TRACK_RE, path):
-                data = zipfile.ZipFile(io.BytesIO(speaker.read(path)))
-                tracks.append(Track.from_zip(path, data, load_wavs))
+        for zip_path in sorted(speaker.namelist()):
+            if re.match(TRACK_RE, zip_path):
+                data = zipfile.ZipFile(io.BytesIO(speaker.read(zip_path)))
+                tracks.append(Track.from_zip(zip_path, data, load_wavs))
 
         speaker.close()
 
@@ -381,10 +381,10 @@ def corpus(path, load_wavs=False):
 
     """
 
-    paths = sorted(glob.glob(os.path.join(path, 's[0-4][0-9].zip')))
+    zip_paths = sorted(glob.glob(os.path.join(path, 's[0-4][0-9].zip')))
 
-    for path in paths:
-        yield Speaker.from_zip(path, load_wavs)
+    for zip_path in zip_paths:
+        yield Speaker.from_zip(zip_path, load_wavs)
 
 
 def process_logs(logs):

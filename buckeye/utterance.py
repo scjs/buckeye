@@ -7,7 +7,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .containers import Word, Pause
+from .containers import Pause
 
 
 class Utterance(object):
@@ -21,9 +21,10 @@ class Utterance(object):
 
     Attributes
     ----------
+    beg
+    end
+    dur
     words
-        Container for a list of entries, such as Word and Pause instances,
-        that make up an utterance in the speech corpus.
 
     """
 
@@ -32,28 +33,20 @@ class Utterance(object):
             self._words = []
             return
 
-        try:
-            words = sorted(words, key=lambda x: float(x.beg))
+        words = sorted(words, key=lambda word: float(word.beg))
 
-            flipped = [True for w in words if float(w.beg) > float(w.end)]
+        for word in words:
+            if float(word.beg) > float(word.end):
+                raise ValueError('Reversed items in utterance')
 
-            overlap = [True for w1, w2 in zip(words, words[1:])
-                       if float(w1.end) > float(w2.beg)]
-
-        except (AttributeError, TypeError, ValueError):
-            raise TypeError('All items in utterance must have numeric '
-                            'beg and end attributes')
-
-        if flipped:
-            raise ValueError('Reversed items in utterance')
-
-        if overlap:
-            raise ValueError('Overlapping items in utterance')
+        for left, right in zip(words, words[1:]):
+            if float(left.end) > float(right.beg):
+                raise ValueError('Overlapping items in utterance')
 
         self._words = words
 
     def __repr__(self):
-        return 'Utterance({})'.format(repr(self.words()))
+        return 'Utterance({})'.format(repr(self.words))
 
     def __str__(self):
         utt = []
@@ -62,35 +55,42 @@ class Utterance(object):
             if hasattr(word, 'orthography'):
                 utt.append(word.orthography)
 
-            else:
+            elif hasattr(word, 'entry'):
                 utt.append(word.entry)
+
+            else:
+                utt.append(str(word))
 
         return '<Utterance "{}">'.format(' '.join(utt))
 
+    @property
     def beg(self):
         """Timestamp where the first item in the utterance begins."""
         try:
             return self._words[0].beg
 
         except IndexError:
-            raise IndexError('Utterance is empty')
+            raise AttributeError('Utterance is empty')
 
+    @property
     def end(self):
         """Timestamp where the last item in the utterance ends."""
         try:
             return self._words[-1].end
 
         except IndexError:
-            raise IndexError('Utterance is empty')
+            raise AttributeError('Utterance is empty')
 
+    @property
     def dur(self):
         """Duration of the utterance."""
         try:
             return self._words[-1].end - self._words[0].beg
 
         except IndexError:
-            raise IndexError('Utterance is empty')
+            raise AttributeError('Utterance is empty')
 
+    @property
     def words(self):
         """Chronological list of Word and Pause instances in this utterance."""
         return self._words
@@ -110,24 +110,19 @@ class Utterance(object):
 
         """
 
-        try:
-            beg = float(item.beg)
-            end = float(item.end)
-
-        except (AttributeError, TypeError, ValueError):
-            raise TypeError('Item must have numeric beg and end attributes '
-                            'to append to Utterance')
+        beg = float(item.beg)
+        end = float(item.end)
 
         if beg > end:
             raise ValueError('Item beg timestamp: {0} is after item end '
                              'timestamp: {1}'.format(str(item.beg), str(item.end)))
 
         for word in self._words:
-            if float(word.beg) > beg and not float(word.beg) > end:
+            if float(word.beg) > beg and float(word.beg) <= end:
                 raise ValueError('Item overlaps with existing items in utterance')
 
         self._words.append(item)
-        self._words = sorted(self._words, key=lambda x: float(x.beg))
+        self._words = sorted(self._words, key=lambda word: float(word.beg))
 
     def __iter__(self):
         return iter(self._words)
@@ -138,36 +133,23 @@ class Utterance(object):
     def __len__(self):
         return len(self._words)
 
-    def speech_rate(self, use_phonetic=True, no_syllables='raise'):
+    def speech_rate(self, use_phonetic=True, ignore_missing_syllables=False):
         """Return the number of syllables per second in this utterance.
-
-        There may be pauses at the beginning or end of an utterance
-        that you do not want to include when calculating the speech
-        rate of the utterance. To ignore any pauses at the beginning
-        or end, use `no_syllables='squeeze'`. To remove them from the
-        utterance, use `utterance.strip()`.
 
         Parameters
         ----------
         use_phonetic: bool, optional
             If True, this method counts syllables in the close phonetic
             transcriptions of the items in this utterance (see
-            `Word.syllables`). If False, use the phonemic attribute to
+            `Word.syllables`). If False, use the phonemic transcription to
             count syllables instead. Default is True.
 
-        no_syllables : {'zero', 'squeeze', 'raise'}
-            If 'zero', any items in the utterance without a
-            `syllables` property are treated as having zero syllables
-            for the speech rate calculation.
-
-            If 'squeeze`, the same behavior as 'zero', plus any items
-            at the beginning or end of the utterance with no `syllables`
-            attribute are ignored while summing the total utterance
-            duration.
-
-            If 'raise', a ValueError is raised if the utterance includes
-            any items without a `syllables` attribute. Default is
-            'raise'.
+        ignore_missing_syllables : bool, optional
+            If True, then items in the utterance without a `syllables`
+            property will be counted as having zero zyllables when this
+            method is called. If False, a ValueError will be raised if
+            the utterance includes any items without a `syllables`
+            property. Default is False.
 
         Returns
         -------
@@ -176,10 +158,6 @@ class Utterance(object):
             this utterance.
 
         """
-
-        if no_syllables not in {'zero', 'squeeze', 'raise'}:
-            raise ValueError('"no_syllables" argument must be one of "zero", '
-                             '"squeeze", or "raise"')
 
         if not self._words:
             raise ValueError('Utterance is empty')
@@ -190,46 +168,15 @@ class Utterance(object):
             if hasattr(word, 'syllables'):
                 syllable_count += word.syllables(use_phonetic)
 
-            elif no_syllables == 'raise':
-                raise ValueError('all objects in Utterance must have a '
-                                 '"syllables" attribute to calculate speech '
+            elif not ignore_missing_syllables:
+                raise ValueError('All objects in Utterance must have a '
+                                 'syllables property to calculate speech '
                                  'rate')
 
-        if no_syllables == 'squeeze':
-            beg = next(word.beg for word in self._words
-                       if hasattr(word, 'syllables'))
-
-            end = next(word.end for word in reversed(self._words)
-                       if hasattr(word, 'syllables'))
-
-            return float(syllable_count) / float(end - beg)
-
-        else:
-            return float(syllable_count) / float(self.dur())
-
-    def strip(self):
-        """Strip items that are not Words, or Words where the duration
-        is not positive, from the left and right edges of the utterance.
-        """
-
-        try:
-            left = next(i for i in self if isinstance(i, Word) and i.dur > 0)
-
-            right = next(i for i in reversed(self._words)
-                         if isinstance(i, Word) and i.dur > 0)
-
-            left_idx = self._words.index(left)
-            right_idx = self._words.index(right) + 1
-
-            self._words = self._words[left_idx:right_idx]
-
-        except StopIteration:
-            self._words = []
-
-        return self
+        return float(syllable_count) / float(self.dur)
 
 
-def words_to_utterances(words, sep=0.5):
+def words_to_utterances(words, sep=0.5, strip_pauses=True):
     """Yield Utterance instances from iterable of Word and Pause instances.
 
     Generator that takes an iterable of Word and Pause instances, such as
@@ -242,57 +189,71 @@ def words_to_utterances(words, sep=0.5):
     Parameters
     ----------
     words : iterable object of Word and Pause instances
+
     sep : float, optional
         If more than `sep` seconds of Pause instances occur consecutively,
         yield the current Utterance instance and initialize a new one with
         no items. Default is 0.5.
 
+    strip_pauses : bool, optional
+        If True, then Pause instances are removed from the beginning and end of
+        each Utterance before it is yielded. Default is True.
+
     Yields
     ------
     utt : Utterance
         An Utterance for each sequence of word entries delimited by
-        >= `sep` seconds (default 0.5) of Pause instances. Pause instances,
-        or Word instances with invalid timestamps, are removed from the
-        beginning and ends of the list of items in each Utterance.
+        >= `sep` seconds (default 0.5) of Pause instances.
 
     """
 
     utt = Utterance()
     pause_duration = 0.0
-    pause = False
+    pause_count = 0
 
     for word in words:
-        # if this item is a pause token (or a bad Word entry)...
-        if isinstance(word, Pause) or not word.phonetic:
+        # if this item is a pause token...
+        if isinstance(word, Pause):
 
-            # skip it if there are no words in the utterance yet
-            if len(utt) == 0:
+            # optionally skip it if there are no words in the utterance yet
+            if strip_pauses and len(utt) == 0:
                 continue
 
             # if this item doesn't follow another pause, restart the
             # pause duration
-            if not pause:
+            if not pause_count:
                 pause_duration = word.dur
 
             # otherwise, add it to the cumulative pause duration
             else:
                 pause_duration += word.dur
 
-            pause = True
+            pause_count += 1
 
         else:
-            pause = False
+            pause_count = 0
 
         utt.append(word)
 
         # if the total pause duration has reached `sep` seconds, return this
         # utterance and start a new one
         if pause_duration >= sep:
-            yield utt.strip()
 
-            utt = Utterance()
+            # optionally remove any pauses at the end
+            if strip_pauses and pause_count:
+                utt._words = utt._words[:-pause_count]
+
+            if len(utt) > 0:
+                yield utt
+
+                utt = Utterance()
+
             pause_duration = 0.0
+            pause_count = 0
 
     # return the last utterance if there is one
+    if strip_pauses and pause_count:
+        utt._words = utt._words[:-pause_count]
+
     if len(utt) > 0:
-        yield utt.strip()
+        yield utt
