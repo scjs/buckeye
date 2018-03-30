@@ -175,11 +175,7 @@ class Word(object):
         else:
             transcription = self._phonemic
 
-        try:
-            return sum(1 for seg in transcription if seg in SYLLABIC)
-
-        except TypeError:
-            return None
+        return sum(1 for seg in transcription if seg in SYLLABIC)
 
 
 class Pause(object):

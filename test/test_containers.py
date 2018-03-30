@@ -37,14 +37,28 @@ class TestWord(object):
     def test_missing_word(self):
         word = Word()
 
+    @raises(AttributeError)
+    def test_word_nonnumeric_times(self):
+        word = Word('the', 'beg', 'end', ['dh', 'iy'], ['dh'], 'DT')
+        word.dur
+
     def test_syllables(self):
         assert_equal(self.word.syllables(), 1)
         assert_equal(self.word.syllables(phonetic=False), 1)
         assert_equal(self.word.syllables(phonetic=True), 0)
 
-        assert_is_none(self.empty_word.syllables())
-        assert_is_none(self.empty_word.syllables(False))
-        assert_is_none(self.empty_word.syllables(True))
+    def test_syllables_phones(self):
+        word = Word('the', 0.05, 0.25, ['dh', 'iy'], ['dh'], 'DT')
+        word._phones = [Phone('dh')]
+
+        assert_equal(word.syllables(), 1)
+        assert_equal(word.syllables(phonetic=False), 1)
+        assert_equal(word.syllables(phonetic=True), 0)
+
+    def test_empty_syllables(self):
+        assert_raises(TypeError, self.empty_word.syllables)
+        assert_raises(TypeError, self.empty_word.syllables, False)
+        assert_raises(TypeError, self.empty_word.syllables, True)
 
     @raises(AttributeError)
     def test_readonly_orthography(self):
@@ -91,12 +105,28 @@ class TestWord(object):
         self.word._phones = []
         assert_true(self.word.misaligned)
 
-    def test_misaligned(self):
-        misaligned_word = Word('', 0.50, 0.25)
+    def test_misaligned_backwards(self):
+        misaligned_word = Word('', 0.50, 0.25, phonetic=['dh'])
+        misaligned_word._phones = [Phone('dh')]
         assert_true(misaligned_word.misaligned)
 
-        phone_dh = Phone('dh')
-        misaligned_word._phones = [phone_dh]
+    def test_misaligned_missing_phonetic_no_phones(self):
+        misaligned_word = Word('', 0.25, 0.50, phonetic=None)
+        assert_false(misaligned_word.misaligned)
+
+    def test_misaligned_missing_phonetic_with_phones(self):
+        misaligned_word = Word('', 0.25, 0.50, phonetic=None)
+        misaligned_word._phones = [Phone('dh')]
+        assert_true(misaligned_word.misaligned)
+
+    def test_misaligned_different_phonetic_and_phones(self):
+        misaligned_word = Word('', 0.25, 0.50, phonetic=['th'])
+        misaligned_word._phones = [Phone('dh')]
+        assert_true(misaligned_word.misaligned)
+
+    def test_misaligned_different_length_phonetic_and_phones(self):
+        misaligned_word = Word('', 0.25, 0.50, phonetic=['dh', 'ah'])
+        misaligned_word._phones = [Phone('dh')]
         assert_true(misaligned_word.misaligned)
 
     def test_misaligned_zero(self):
@@ -126,6 +156,11 @@ class TestPause(object):
         assert_is_none(empty_pause.entry)
         assert_is_none(empty_pause.beg)
         assert_is_none(empty_pause.end)
+
+    @raises(AttributeError)
+    def test_pause_nonnumeric_times(self):
+        pause = Pause('<SIL>', 'beg', 'end')
+        pause.dur
 
     @raises(AttributeError)
     def test_readonly_entry(self):
