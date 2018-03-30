@@ -8,7 +8,7 @@ with open('README.rst') as readme:
 
 
 setup(name='buckeye',
-      version='1.2.1',
+      version='1.3',
       description='Classes and iterators for the Buckeye Corpus',
       long_description=long_description,
       url='https://github.com/scjs/buckeye/',
